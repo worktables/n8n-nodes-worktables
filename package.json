@@ -1,19 +1,19 @@
 {
-  "name": "n8n-nodes-worktables",
+  "name": "n8n-nodes-<...>",
   "version": "0.1.0",
-  "description": "Worktables Node",
+  "description": "",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "Worktables",
-    "email": "tech@worktables.io"
+    "name": "",
+    "email": ""
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/worktables/n8n-nodes-worktables.git"
+    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
   },
   "main": "index.js",
   "scripts": {
@@ -30,10 +30,12 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/WorktablesAPI.credentials.js"
+      "dist/credentials/ExampleCredentialsApi.credentials.js",
+      "dist/credentials/HttpBinApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Worktables/Worktables.node.js"
+      "dist/nodes/ExampleNode/ExampleNode.node.js",
+      "dist/nodes/HttpBin/HttpBin.node.js"
     ]
   },
   "devDependencies": {
