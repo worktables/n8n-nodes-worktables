@@ -1,0 +1,27 @@
+{
+    "name": "MondayWebhook",
+    "version": 1,
+    "description": "Triggers workflows when an event occurs in Monday.com",
+    "type": "trigger",
+    "class": "MondayWebhook",
+    "defaults": {
+        "name": "Monday Webhook"
+    },
+    "inputs": [],
+    "outputs": [
+        {
+            "name": "main",
+            "type": "output"
+        }
+    ],
+    "credentials": [],
+    "webhooks": [
+        {
+            "name": "default",
+            "httpMethod": "POST",
+            "responseMode": "onReceived",
+            "path": "monday-webhook"
+        }
+    ],
+    "properties": []
+}
