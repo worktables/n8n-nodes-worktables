@@ -1,0 +1,1220 @@
+{
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          160,
+          1040
+        ],
+        "id": "d91f8de9-cd91-4ee8-9bd6-1c19d8f2d834",
+        "name": "When clicking ‘Test workflow’"
+      },
+      {
+        "parameters": {
+          "content": "# Board",
+          "height": 80,
+          "width": 1900,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          460,
+          1260
+        ],
+        "id": "f204a131-af68-400b-9986-df98e7615185",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "workspace": "-1"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          480,
+          1360
+        ],
+        "id": "38131494-65f9-40ee-9a3d-3acc98bce2f9",
+        "name": "Worktables",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "listBoardGroups",
+          "workspace": "-1",
+          "boardId": "6414507323"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          640,
+          1360
+        ],
+        "id": "980de61d-2290-4f9b-9aa5-3c6fc5caebdd",
+        "name": "Worktables1",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "createBoard",
+          "boardName": "Created by N8N",
+          "workspace": "2425174",
+          "description": "Created by N8N",
+          "folder": "=16952074",
+          "usersBoardIds": {
+            "usersBoardIds": [
+              {
+                "userId": "61864800",
+                "isOwner": true
+              }
+            ]
+          },
+          "teamBoardIds": {
+            "teamBoardIds": [
+              {
+                "teamId": "952718",
+                "isOwner": true
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          800,
+          1360
+        ],
+        "id": "995a7aa8-9bd5-4f50-80bd-b18ea1498c73",
+        "name": "Worktables2",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "createGroup",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "groupName": "Group created by N8N",
+          "groupColor": "#00c875",
+          "groupId": "group_title"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          960,
+          1360
+        ],
+        "id": "bbdfd6fe-d929-4f55-be2e-468745900114",
+        "name": "Worktables3",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "getBoard",
+          "workspace": "2425174",
+          "boardId": "=8886337654"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          1360
+        ],
+        "id": "6ef8a5b5-4bae-4a1b-b440-0c7e93dbdbda",
+        "name": "Worktables4",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "getGroup"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1280,
+          1360
+        ],
+        "id": "1638f24e-0433-4b7c-ae6e-ba22c2880d39",
+        "name": "Worktables5",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "duplicateGroup",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "groupName": "Duplicated by N8N"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1440,
+          1360
+        ],
+        "id": "90baeb0e-dc8f-4b7d-86a6-f30ab84d4c34",
+        "name": "Worktables6",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "duplicateBoard",
+          "boardName": "Duplicated by N8N",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "folder": "=16952074",
+          "keepSubscribers": true
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1600,
+          1360
+        ],
+        "id": "faa37835-1b5a-4355-bfd1-05936fb021dc",
+        "name": "Worktables7",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "listBoardActivityLogs",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "from": "2025-04-08T00:00:00",
+          "to": "2025-04-09T14:44:51"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1760,
+          1360
+        ],
+        "id": "85c0d81b-2445-42ad-ade3-3d6d28944b89",
+        "name": "Worktables8",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "listBoardSubscribers",
+          "workspace": "2425174",
+          "boardId": "=8886337654"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1920,
+          1360
+        ],
+        "id": "f38445eb-d181-4161-938f-10f1f3e03bcc",
+        "name": "Worktables9",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "addBoardSubscribers",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "usersBoardIds": {
+            "usersBoardIds": [
+              {
+                "userId": "35597267"
+              }
+            ]
+          },
+          "teamBoardIds": {
+            "teamBoardIds": [
+              {
+                "teamId": "952709"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          2080,
+          1360
+        ],
+        "id": "7dc2b479-4ab6-4f59-952f-ee0ff94fbd72",
+        "name": "Worktables10",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "removeBoardSubscribers",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "removeSubscribers": [
+            "71503960"
+          ]
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          2240,
+          1360
+        ],
+        "id": "0d62653c-b9f7-44c3-87b8-1a4b3a2095c7",
+        "name": "Worktables11",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "# Item",
+          "height": 80,
+          "width": 1740,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          460,
+          960
+        ],
+        "id": "8f3a6923-e698-4c5f-a868-6d6ffb6e265f",
+        "name": "Sticky Note3"
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "workspace": "2425174",
+          "groupId": "group_mkpva8wm",
+          "boardId": "=8886337654",
+          "itemName": "Created by N8N",
+          "parentId": 0,
+          "columnValues": {
+            "columnValue": [
+              {
+                "columnId": "status",
+                "newValue": "Create N8N"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          640,
+          1060
+        ],
+        "id": "0c2bc7b8-8424-44f7-90b4-9c4330540ee0",
+        "name": "Create Item",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "getItem",
+          "itemId": "8886337853"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          480,
+          1060
+        ],
+        "id": "d6797764-9139-4d95-9d22-e6d0b8b1af73",
+        "name": "Get an Item",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "duplicateItem",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "itemId": "8886337925",
+          "withUpdates": true
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1600,
+          1060
+        ],
+        "id": "8bf376f4-262b-45b5-accc-5f89ac79494a",
+        "name": "Worktables12",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "listItemSubscribers"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          2080,
+          1060
+        ],
+        "id": "1985272a-c22a-472c-b98b-2c0d52501655",
+        "name": "Worktables15",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "### Partially working\n",
+          "height": 80,
+          "width": 170
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1900,
+          1020
+        ],
+        "id": "6a0ae338-70ca-4eaa-9a97-aa739e24a3a4",
+        "name": "Sticky Note9"
+      },
+      {
+        "parameters": {
+          "content": "# Update",
+          "height": 80,
+          "width": 640,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          440,
+          580
+        ],
+        "id": "ac392c51-ebd8-4889-b677-95ad11b9751e",
+        "name": "Sticky Note10"
+      },
+      {
+        "parameters": {
+          "resource": "update",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "itemId": "8898396217"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          460,
+          680
+        ],
+        "id": "003d520b-db2d-4749-aa33-c8e0d5a6fc15",
+        "name": "Worktables16",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "update",
+          "operation": "createUpdate",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "itemId": "8886337853",
+          "bodyContent": "<p>Created by N8N</p>"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          620,
+          680
+        ],
+        "id": "5808d034-5fa7-4804-880f-4da9da38d6bf",
+        "name": "Worktables17",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "update",
+          "operation": "updateUpdate",
+          "bodyContent": "<p>Updated by N8N</p>",
+          "updateId": "4024728517"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          780,
+          680
+        ],
+        "id": "ece992fd-cc96-48b9-aa9d-9cb3f20fc03e",
+        "name": "Worktables18",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "update",
+          "operation": "deleteUpdate",
+          "updateId": "4024728517"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          940,
+          680
+        ],
+        "id": "dee4bc73-720a-4fa2-989a-8f21b695a0a3",
+        "name": "Worktables19",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "# Team",
+          "height": 80,
+          "width": 1480,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          440,
+          280
+        ],
+        "id": "91f4c135-762d-41e9-98b4-d495774f87d6",
+        "name": "Sticky Note11"
+      },
+      {
+        "parameters": {
+          "resource": "team"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          460,
+          380
+        ],
+        "id": "c90b0ad4-dbc1-4b02-8e10-2afb59be2712",
+        "name": "Worktables20",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "listTeamMembers"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          620,
+          380
+        ],
+        "id": "797789a5-e25f-479a-bcec-6b0cad0da483",
+        "name": "Worktables21",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "getTeam",
+          "team": "750422"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          780,
+          380
+        ],
+        "id": "63a31a6c-c781-4e9e-abf2-fbffd46e1d72",
+        "name": "Worktables22",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "createTeam",
+          "teamName": "Created by N8N",
+          "userIds": [
+            "62818631"
+          ]
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          940,
+          380
+        ],
+        "id": "e93de4a9-9507-4f6c-a0cc-c9cbd95cf9a5",
+        "name": "Worktables23",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "deleteTeam"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1100,
+          380
+        ],
+        "id": "cad0946c-8707-4580-ba48-e6f4cec8b478",
+        "name": "Worktables24",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "removeUsersFromTeam",
+          "teamIds": "1228038",
+          "userIds": [
+            "62818632"
+          ]
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1420,
+          380
+        ],
+        "id": "ffd21bb8-f304-470f-9d8a-617e83ced3e5",
+        "name": "Worktables27",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "# User",
+          "height": 80,
+          "width": 300,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1160,
+          580
+        ],
+        "id": "a5bf80f4-60fe-47d2-bb79-9b0f2da848b2",
+        "name": "Sticky Note15"
+      },
+      {
+        "parameters": {
+          "resource": "user"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          680
+        ],
+        "id": "2404f8c7-35a4-4b8f-8135-bf7baf56d108",
+        "name": "Worktables28",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "user",
+          "operation": "getUser",
+          "userIds": [
+            "45779868"
+          ]
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1340,
+          680
+        ],
+        "id": "9c0dd306-c6af-409e-9125-65fa886d56a1",
+        "name": "Worktables29",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "# Api Query",
+          "height": 80,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1520,
+          580
+        ],
+        "id": "d35d297a-aa92-48fe-9c81-cd34e66cb6f9",
+        "name": "Sticky Note16"
+      },
+      {
+        "parameters": {
+          "resource": "query",
+          "runQuery": "={\n  items(ids: 8020743997) {\n    column_values(ids: \"files_mkkqsvnw\") {\n      value\n    }\n  }\n}"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1520,
+          680
+        ],
+        "id": "2da10c0e-31bb-4c8a-ad32-298d2a00f542",
+        "name": "Worktables30",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "updateItem",
+          "workspace": "2425174",
+          "boardId": "8886337654",
+          "itemId": "8886337853",
+          "columnValues": {
+            "columnValue": [
+              {
+                "columnId": "name",
+                "newValue": "Update By N8N Name"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          960,
+          1060
+        ],
+        "id": "5dd94872-0f16-419d-bf03-966a6a81ea14",
+        "name": "📌 Update an Item",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "updateItem",
+          "workspace": "2425174",
+          "boardId": "8886339351",
+          "itemId": "8886340579",
+          "columnValues": {
+            "columnValue": [
+              {
+                "columnId": "name",
+                "newValue": "Update By N8N Name"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1120,
+          1060
+        ],
+        "id": "1a47aedb-3b20-433f-bec4-3b25282c00bf",
+        "name": "📌 Update a Subitem",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "deleteItem",
+          "itemId": "8917102404"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1280,
+          1060
+        ],
+        "id": "7176b695-7284-4eff-91a6-613fa2b91148",
+        "name": "📌 Delete an Item",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "deleteItem",
+          "itemId": "8886337925"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1440,
+          1060
+        ],
+        "id": "e59dd82d-0787-4ca7-b954-721ae3a91575",
+        "name": "📌 Delete a Subitem",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "searchItems",
+          "workspace": "2425174",
+          "boardId": "=8886337654",
+          "filterRules": {
+            "rule": [
+              {
+                "columnId": "status",
+                "compareAttribute": "text",
+                "operator": "not_any_of",
+                "compareValue": "N8N TEST"
+              },
+              {
+                "columnId": "text_mkq0ckhb",
+                "operator": "contains_text",
+                "compareValue": "SearchItem"
+              }
+            ]
+          },
+          "sortOptions": {
+            "sortBy": [
+              {
+                "columnId": "name",
+                "direction": "desc"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1920,
+          1060
+        ],
+        "id": "48f38cf5-66bb-4fbd-88fc-2a23bcee6b38",
+        "name": "📌 Search items",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {},
+        "type": "@worktables/n8n-nodes-worktables.mondayWebhook",
+        "typeVersion": 1,
+        "position": [
+          1860,
+          680
+        ],
+        "id": "07c41a20-238e-4601-bba9-af7d7bf07905",
+        "name": "Monday Webhook",
+        "webhookId": "a778ebae-95c3-4f05-ad86-0ada346025a1"
+      },
+      {
+        "parameters": {
+          "content": "# Webhook",
+          "height": 80,
+          "width": 180,
+          "color": 4
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1840,
+          580
+        ],
+        "id": "c85f87b1-0e1d-4e86-9cbc-b96d4c15a5a4",
+        "name": "Sticky Note17"
+      },
+      {
+        "parameters": {
+          "resource": "team",
+          "operation": "addUsersToTeam",
+          "teamIds": "1228036",
+          "userIds": [
+            "35597267"
+          ]
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1260,
+          380
+        ],
+        "id": "eb810a8d-d6b8-44b0-953a-fe16225c3edd",
+        "name": "Worktables26",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "workspace": "2425174",
+          "boardId": "8886339351",
+          "itemName": "Created by N8N 2",
+          "parentId": "8886337853",
+          "columnValues": {
+            "columnValue": [
+              {
+                "columnId": "status",
+                "newValue": "Create N8N"
+              }
+            ]
+          }
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          800,
+          1060
+        ],
+        "id": "fc7c602c-dc45-4d1d-acce-8ec768582c4e",
+        "name": "Create subitem",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "item",
+          "operation": "listBoardItems",
+          "boardId": "7055564156"
+        },
+        "type": "@worktables/n8n-nodes-worktables.worktables",
+        "typeVersion": 1,
+        "position": [
+          1760,
+          1060
+        ],
+        "id": "39c8f73e-8fb7-47c3-aea9-66dbb8b9d953",
+        "name": "📌 List items",
+        "credentials": {
+          "WorktablesApi": {
+            "id": "ZabS9dhiBDsN3kxl",
+            "name": "Worktables account Automation"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "When clicking ‘Test workflow’": {
+        "main": [
+          [
+            {
+              "node": "Worktables",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables1",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables2",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables3",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables4",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables5",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables6",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables7",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables8",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables9",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables10",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Get an Item",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create Item",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📌 Update an Item",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables12",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📌 Search items",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables16",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables17",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables18",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables19",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables20",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables21",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables22",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables23",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables27",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables28",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Worktables29",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Monday Webhook",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "📌 List items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Worktables15": {
+        "main": [
+          []
+        ]
+      },
+      "📌 List items": {
+        "main": [
+          [
+            {
+              "node": "Worktables15",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "pinData": {},
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "0b40a8300b416460a1829ca75108d9622b851fdb9aea07a8173d67031b1a0064"
+    }
+  }

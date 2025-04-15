@@ -1,3 +1,6 @@
+/* eslint-disable n8n-nodes-base/node-class-description-inputs-wrong-regular-node */
+/* eslint-disable n8n-nodes-base/node-class-description-outputs-wrong */
+/* eslint-disable n8n-nodes-base/node-dirname-against-convention */
 import {
 	IWebhookFunctions,
 	IWebhookResponseData,
@@ -8,15 +11,16 @@ import {
 
 export class MondayWebhook implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Monday Webhook',
+		displayName: 'Worktables Webhook',
 		name: 'mondayWebhook',
+		icon: 'file:worktables_icon.svg',
 		group: ['trigger'],
 		version: 1,
 		description: 'Triggers workflows when an event occurs in Monday.com',
 		defaults: {
 			name: 'Monday Webhook',
 		},
-		inputs: [],
+		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
 		credentials: [],
 		webhooks: [
@@ -24,7 +28,7 @@ export class MondayWebhook implements INodeType {
 				name: 'default',
 				httpMethod: 'POST',
 				responseMode: 'onReceived',
-				path: 'monday-webhook',
+				path: '/webhook',
 			},
 		],
 		properties: [],
@@ -36,18 +40,17 @@ export class MondayWebhook implements INodeType {
 
 		const body = req.body;
 
+		console.log('Webhook received', body);
+
 		// ✅ Respond to Monday.com's challenge request
 		if (body.challenge) {
 			res.status(200).json({ challenge: body.challenge });
-			return {
-				webhookResponse: 'Challenge received',
-			};
+			return {};
 		}
 
 		// ✅ Emit event to n8n workflow
 		return {
 			workflowData: [this.helpers.returnJsonArray([body])],
-			// Optional: You can also customize the response if necessary
 		};
 	}
 }
