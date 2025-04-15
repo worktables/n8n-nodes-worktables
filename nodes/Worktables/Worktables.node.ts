@@ -440,7 +440,7 @@ export class Worktables implements INodeType {
 
 			// Board Fields
 			{
-				displayName: 'Board Name',
+				displayName: 'Board',
 				name: 'boardName',
 				type: 'string',
 				default: '',
@@ -448,7 +448,7 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['createBoard', 'duplicateBoard'] } },
 			},
 			{
-				displayName: 'Workspace Name or ID',
+				displayName: 'Workspace',
 				name: 'workspace',
 				type: 'options',
 				typeOptions: { loadOptionsMethod: 'getWorkspaces' },
@@ -517,7 +517,7 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['createBoard'] } },
 			},
 			{
-				displayName: 'Template ID',
+				displayName: 'Template',
 				name: 'templateId',
 				type: 'string',
 				default: '',
@@ -565,7 +565,7 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['listBoards'] } },
 			},
 			{
-				displayName: 'Board Name or ID',
+				displayName: 'Board',
 				name: 'boardId',
 				type: 'options',
 				typeOptions: {
@@ -598,7 +598,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Folder Name or ID',
+				displayName: 'Folder',
 				name: 'folder',
 				type: 'options',
 				typeOptions: { loadOptionsDependsOn: ['workspace'], loadOptionsMethod: 'getFolders' },
@@ -635,7 +635,7 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['duplicateBoard'] } },
 			},
 			{
-				displayName: 'Group Name or ID',
+				displayName: 'Group',
 				name: 'groupId',
 				type: 'options',
 				typeOptions: {
@@ -651,7 +651,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Group Name',
+				displayName: 'Group',
 				name: 'groupName',
 				type: 'string',
 				default: '',
@@ -692,7 +692,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Remove Subscribers Names or IDs',
+				displayName: 'Remove Subscribers',
 				name: 'removeSubscribers',
 				typeOptions: {
 					loadOptionsMethod: 'getSubscribersFromBoard',
@@ -723,7 +723,7 @@ export class Worktables implements INodeType {
 						name: 'usersBoardIds',
 						values: [
 							{
-								displayName: 'User Name or ID',
+								displayName: 'User',
 								name: 'userId',
 								type: 'options',
 								description:
@@ -760,7 +760,7 @@ export class Worktables implements INodeType {
 						name: 'teamBoardIds',
 						values: [
 							{
-								displayName: 'Team Name or ID',
+								displayName: 'Team',
 								name: 'teamId',
 								type: 'options',
 								description:
@@ -806,7 +806,7 @@ export class Worktables implements INodeType {
 				],
 			}, */
 			{
-				displayName: 'Team Name or ID',
+				displayName: 'Team Name',
 				name: 'teamIds',
 				type: 'options',
 				typeOptions: { loadOptionsMethod: 'getTeams' },
@@ -861,7 +861,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Relative To Group Name or ID',
+				displayName: 'Relative To Group Name',
 				name: 'groupId',
 				type: 'options',
 				typeOptions: {
@@ -894,7 +894,7 @@ export class Worktables implements INodeType {
 			},
 			// Item Fields
 			{
-				displayName: 'Item Name or ID',
+				displayName: 'Item',
 				name: 'itemId',
 				type: 'options',
 				typeOptions: {
@@ -912,7 +912,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Board Name or ID',
+				displayName: 'Board',
 				name: 'boardId',
 				type: 'options',
 				typeOptions: {
@@ -932,7 +932,7 @@ export class Worktables implements INodeType {
 			// Toggle parent item
 
 			{
-				displayName: 'Item Name or ID',
+				displayName: 'Item',
 				name: 'itemId',
 				type: 'options',
 				typeOptions: {
@@ -990,7 +990,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Parent Item Name or ID',
+				displayName: 'Parent Item',
 				name: 'parentId',
 				type: 'options',
 				typeOptions: {
@@ -1026,7 +1026,7 @@ export class Worktables implements INodeType {
 						name: 'columnValue',
 						values: [
 							{
-								displayName: 'Column Name or ID',
+								displayName: 'Column',
 								name: 'columnId',
 								type: 'options',
 								description:
@@ -1065,7 +1065,7 @@ export class Worktables implements INodeType {
 						name: 'columnValuesUploadFile',
 						values: [
 							{
-								displayName: 'Column Name or ID',
+								displayName: 'Column',
 								name: 'columnId',
 								type: 'options',
 								description:
@@ -1129,7 +1129,7 @@ export class Worktables implements INodeType {
 						name: 'rule',
 						values: [
 							{
-								displayName: 'Column Name or ID',
+								displayName: 'Column',
 								name: 'columnId',
 								type: 'options',
 								description:
@@ -1201,7 +1201,7 @@ export class Worktables implements INodeType {
 						name: 'sortBy',
 						values: [
 							{
-								displayName: 'Column Name or ID',
+								displayName: 'Column',
 								name: 'columnId',
 								type: 'options',
 								description:
@@ -1231,7 +1231,7 @@ export class Worktables implements INodeType {
 			// Upload file
 
 			{
-				displayName: 'File Column Name or ID',
+				displayName: 'File Column',
 				name: 'fileColumnId',
 				type: 'options',
 				typeOptions: {
@@ -1323,7 +1323,7 @@ export class Worktables implements INodeType {
 
 			// Team Fields
 			{
-				displayName: 'Team Name or ID',
+				displayName: 'Team',
 				name: 'team',
 				type: 'options',
 				typeOptions: { loadOptionsMethod: 'getTeams' },
@@ -1363,7 +1363,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Users Name or IDs',
+				displayName: 'Userss',
 				name: 'userIds',
 				type: 'multiOptions',
 				typeOptions: { loadOptionsMethod: 'getUsers' },
