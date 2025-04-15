@@ -2,6 +2,8 @@
 /* eslint-disable n8n-nodes-base/node-class-description-outputs-wrong */
 /* eslint-disable n8n-nodes-base/node-class-description-inputs-wrong-regular-node */
 /* eslint-disable n8n-nodes-base/node-param-default-wrong-for-options */
+/* eslint-disable n8n-nodes-base/node-param-display-name-wrong-for-dynamic-multi-options */
+/* eslint-disable n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options */ 
 
 import {
 	INodeType,
