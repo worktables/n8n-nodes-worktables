@@ -3,7 +3,7 @@
 /* eslint-disable n8n-nodes-base/node-class-description-inputs-wrong-regular-node */
 /* eslint-disable n8n-nodes-base/node-param-default-wrong-for-options */
 /* eslint-disable n8n-nodes-base/node-param-display-name-wrong-for-dynamic-multi-options */
-/* eslint-disable n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options */ 
+/* eslint-disable n8n-nodes-base/node-param-display-name-wrong-for-dynamic-options */
 
 import {
 	INodeType,
@@ -952,6 +952,44 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
+				displayName: 'Is Subitem',
+				name: 'isSubitem',
+				type: 'boolean',
+				default: false,
+				description: 'Whether a subitem',
+				displayOptions: {
+					show: {
+						operation: ['getItem'],
+					},
+				},
+			},
+			{
+				displayName: 'Fetch Subitems',
+				name: 'fetchSubitems',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to fetch subitems',
+				displayOptions: {
+					show: {
+						operation: ['getItem'],
+						isSubitem: [false],
+					},
+				},
+			},
+			{
+				displayName: 'Fetch Parent Item',
+				name: 'fetchParentItems',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to fetch parent item',
+				displayOptions: {
+					show: {
+						operation: ['getItem'],
+						isSubitem: [true],
+					},
+				},
+			},
+			{
 				displayName: 'Item ID',
 				name: 'itemId',
 				type: 'string',
@@ -1365,7 +1403,7 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Userss',
+				displayName: 'Users',
 				name: 'userIds',
 				type: 'multiOptions',
 				typeOptions: { loadOptionsMethod: 'getUsers' },
@@ -2792,32 +2830,175 @@ export class Worktables implements INodeType {
 				switch (operation) {
 					case 'getItem': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
+						const isSubitem = this.getNodeParameter('isSubitem', 0) as boolean;
+
+						const fetchSubitems =
+							!isSubitem && (this.getNodeParameter('fetchSubitems', 0) as boolean);
+
+						const fetchParentItem =
+							isSubitem && (this.getNodeParameter('fetchParentItems', 0) as boolean);
+
+						const queryColumnValues = `
+							column_values {
+								id
+								text
+								value
+								type
+								... on BoardRelationValue {
+									display_value
+									linked_item_ids
+								}
+								... on MirrorValue {
+									display_value
+									mirrored_items {
+										linked_board_id
+									}
+								}
+							}
+						`;
+
+						const querySubitems = `
+							subitems {
+								${queryColumnValues}
+							}
+						`;
+
+						const queryParentItem = `
+							parent_item {
+								id
+								name
+								created_at
+								updated_at
+								${queryColumnValues}
+							}
+						`;
 
 						const query = `
-							query {
-									items(ids: ["${itemId}"]) {
-										id
-										name
-										created_at
-										updated_at
-											column_values {
-												id
-												text
-												value
-											}
-									}
+						{
+							items(ids: ["${itemId}"]) {
+								id
+								name
+								created_at
+								updated_at
+								${queryColumnValues}
+								${fetchSubitems ? querySubitems : ''}
+								${fetchParentItem ? queryParentItem : ''}
 							}
+						}
+						`;
 
-							`;
+						console.log('Query: ', query);
 
-						response = await this.helpers.request({
+						const rawResponse = await this.helpers.request({
 							method: 'POST',
 							url: 'https://api.monday.com/v2',
 							headers,
 							body: { query },
 						});
-						break;
+
+						const parsed = JSON.parse(rawResponse);
+						const item = parsed.data.items[0];
+
+						const columnValues = item.column_values || [];
+
+						const formatted: Record<string, any> = {
+							id: item.id,
+							name: item.name,
+							created_at: item.created_at,
+							updated_at: item.updated_at,
+						};
+
+						for (const col of columnValues) {
+							if (col.type === 'subtasks') continue;
+
+							const formattedCol: Record<string, any> = {
+								type: col.type,
+								value: col.value,
+								text: col.text,
+							};
+
+							if ('display_value' in col) {
+								formattedCol.display_value = col.display_value;
+							}
+
+							if ('linked_item_ids' in col) {
+								formattedCol.linked_item_ids = col.linked_item_ids;
+							}
+
+							if ('mirrored_items' in col) {
+								formattedCol.mirrored_items = col.mirrored_items;
+							}
+
+							formatted[col.id] = formattedCol;
+						}
+
+						if (item.subitems && Array.isArray(item.subitems)) {
+							formatted.subitems = item.subitems.map((subitem: any) => {
+								const subFormatted: Record<string, any> = {};
+
+								for (const col of subitem.column_values || []) {
+									const subCol: Record<string, any> = {
+										type: col.type,
+										value: col.value,
+										text: col.text,
+									};
+
+									if ('display_value' in col) {
+										subCol.display_value = col.display_value;
+									}
+
+									if ('linked_item_ids' in col) {
+										subCol.linked_item_ids = col.linked_item_ids;
+									}
+
+									if ('mirrored_items' in col) {
+										subCol.mirrored_items = col.mirrored_items;
+									}
+
+									subFormatted[col.id] = subCol;
+								}
+
+								return subFormatted;
+							});
+						}
+
+						if (item.parent_item && typeof item.parent_item === 'object') {
+							const parentItem = item.parent_item;
+							const parentFormatted: Record<string, any> = {
+								id: parentItem.id,
+								name: parentItem.name,
+								created_at: parentItem.created_at,
+								updated_at: parentItem.updated_at,
+							};
+
+							for (const col of parentItem.column_values || []) {
+								const subCol: Record<string, any> = {
+									type: col.type,
+									value: col.value,
+									text: col.text,
+								};
+
+								if ('display_value' in col) {
+									subCol.display_value = col.display_value;
+								}
+
+								if ('linked_item_ids' in col) {
+									subCol.linked_item_ids = col.linked_item_ids;
+								}
+
+								if ('mirrored_items' in col) {
+									subCol.mirrored_items = col.mirrored_items;
+								}
+
+								parentFormatted[col.id] = subCol;
+							}
+
+							formatted.parent_item = parentFormatted;
+						}
+
+						return [[{ json: formatted }]];
 					}
+
 					case 'updateItem': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const boardId = this.getNodeParameter('boardId', 0) as string;
@@ -3660,7 +3841,7 @@ export class Worktables implements INodeType {
 			default:
 				throw new NodeApiError(this.getNode(), { message: `Unsupported resource: ${resource}` });
 		}
-
+		
 		return [[{ json: JSON.parse(response) }]];
 	}
 }
