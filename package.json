@@ -1,6 +1,6 @@
 {
   "name": "@worktables/n8n-nodes-worktables",
-  "version": "9.0.17",
+  "version": "10.19.0",
 
   "description": "n8n nodes for Monday.com integration",
   "keywords": [
