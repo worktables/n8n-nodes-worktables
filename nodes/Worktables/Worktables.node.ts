@@ -16,6 +16,7 @@ import {
 	NodeApiError,
 	NodeOperationError,
 } from 'n8n-workflow';
+import { parseApiResponse } from '../../utils/isErrorResponse';
 
 export class Worktables implements INodeType {
 	description: INodeTypeDescription = {
@@ -3841,7 +3842,22 @@ export class Worktables implements INodeType {
 			default:
 				throw new NodeApiError(this.getNode(), { message: `Unsupported resource: ${resource}` });
 		}
-		
-		return [[{ json: JSON.parse(response) }]];
+		response = await parseApiResponse(response);
+
+		console.log('Response res: ', JSON.stringify(response, null, 2));
+
+		if (response.success) {
+			const parsed = JSON.parse(response.data);
+			console.log('Parsed res: ', parsed);
+			return [[{ json: parsed }]];
+		} else {
+			const parsed = JSON.parse(response.data);
+			const firstError = parsed.errors || { message: 'Unknown error' };
+			console.log(firstError[0]);
+			throw new NodeApiError(this.getNode(), firstError, {
+				message: firstError.message,
+				description: JSON.stringify(firstError, null, 2),
+			});
+		}
 	}
 }

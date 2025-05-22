@@ -22,5 +22,14 @@
 		"outDir": "./dist/",
 		"allowSyntheticDefaultImports": true
 	},
-	"include": ["credentials/**/*", "nodes/**/*", "nodes/**/*.json", "package.json"]
+	"include": [
+		"credentials/**/*",
+		"nodes/**/*",
+		"nodes/**/*.json",
+		"package.json",
+		"utils/**/*",
+		"utils/**/*.json",
+		"test/**/*",
+		"test/**/*.json"
+	]
 }
