@@ -17,6 +17,8 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 import { parseApiResponse } from '../../utils/isErrorResponse';
+import { getBoardSearchList, getColumnsItems, getItemSearchList } from './GenericFunctions';
+import { itemFields, itemOperations } from './ItemOperations';
 
 export class Worktables implements INodeType {
 	description: INodeTypeDescription = {
@@ -68,6 +70,8 @@ export class Worktables implements INodeType {
 				required: true,
 				description: 'Select the category of actions to perform',
 			},
+			...itemOperations,
+			...itemFields,
 
 			// Boards Operations
 			{
@@ -173,84 +177,6 @@ export class Worktables implements INodeType {
 				required: true,
 				displayOptions: {
 					show: { resource: ['query'] },
-				},
-			},
-
-			// Item Operations
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'Get an Item',
-						value: 'getItem',
-						description: 'Retrieve details of a specific item',
-						action: 'Get an item',
-					},
-					{
-						name: 'Create an Item',
-						value: 'createItem',
-						description: 'Create an item in a board',
-						action: 'Create an item',
-					},
-					{
-						name: 'Update Column Values of an Item',
-						value: 'updateItem',
-						action: 'Update column values of an item',
-					},
-					{
-						name: 'Delete an Item',
-						value: 'deleteItem',
-						description: 'Delete an item from a board',
-						action: 'Delete an item',
-					},
-					{
-						name: 'Duplicate an Item',
-						value: 'duplicateItem',
-						description: 'Duplicate an existing item',
-						action: 'Duplicate an item',
-					},
-					{
-						name: 'List Items in a Board',
-						value: 'listBoardItems',
-						description: 'List all items in a board',
-						action: 'List items in a board',
-					},
-					{
-						name: 'List Items in a Group',
-						value: 'listGroupItems',
-						description: 'List all items in a group',
-						action: 'List items in a group',
-					},
-					{
-						name: 'Search Items by Filter',
-						value: 'searchItems',
-						description: 'Search items in a board using a filter',
-						action: 'Search items by filter',
-					},
-					{
-						name: 'List Item Subscribers',
-						value: 'listItemSubscribers',
-						description: 'List all subscribers of an item',
-						action: 'List item subscribers',
-					},
-					{
-						name: 'Upload a File to an Item Column',
-						value: 'uploadItemFile',
-						action: 'Upload a file to an item column',
-					},
-					{
-						name: 'Download Files From an Item Column',
-						value: 'downloadFilesFromItem',
-						action: 'Download files from an item column',
-					},
-				],
-				default: 'createItem',
-				required: true,
-				displayOptions: {
-					show: { resource: ['item'] },
 				},
 			},
 
@@ -474,12 +400,11 @@ export class Worktables implements INodeType {
 							'addBoardSubscribers',
 							'removeBoardSubscribers',
 							'createItem',
-							'updateItem',
+
 							'duplicateItem',
 							'searchItems',
 							'uploadItemFile',
 							'listUpdates',
-							'createUpdate',
 						],
 					},
 				},
@@ -584,7 +509,7 @@ export class Worktables implements INodeType {
 						operation: [
 							'getBoard',
 							'createSubitem',
-							'updateItem',
+
 							'uploadFile',
 							'listBoardGroups',
 							'createGroup',
@@ -595,7 +520,6 @@ export class Worktables implements INodeType {
 							'addBoardSubscribers',
 							'removeBoardSubscribers',
 							'listUpdates',
-							'createUpdate',
 						],
 					},
 				},
@@ -910,7 +834,22 @@ export class Worktables implements INodeType {
 					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
-						operation: ['updateItem', 'createSubitem', 'uploadFile', 'listUpdates', 'createUpdate'],
+						operation: ['createSubitem', 'uploadFile', 'listUpdates'],
+					},
+				},
+			},
+			// Item Fields
+			{
+				displayName: 'Item',
+				name: 'itemId',
+				type: 'string',
+				default: '',
+				required: true,
+				description:
+					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['createUpdate'],
 					},
 				},
 			},
@@ -1049,45 +988,7 @@ export class Worktables implements INodeType {
 				description:
 					'If this is a subitem, specify the ID of the parent item. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 			},
-			{
-				displayName: 'Column Values',
-				name: 'columnValues',
-				type: 'fixedCollection',
-				typeOptions: { multipleValues: true },
-				default: [],
-				displayOptions: {
-					show: {
-						resource: ['item', 'subitem'],
-						operation: ['createItem', 'updateItem', 'createSubitem'],
-					},
-				},
-				options: [
-					{
-						displayName: 'Column Value',
-						name: 'columnValue',
-						values: [
-							{
-								displayName: 'Column',
-								name: 'columnId',
-								type: 'options',
-								description:
-									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
-								typeOptions: {
-									loadOptionsDependsOn: ['boardId'],
-									loadOptionsMethod: 'getColumnsItems',
-								},
-								default: '',
-							},
-							{
-								displayName: 'New Value',
-								name: 'newValue',
-								type: 'string',
-								default: '',
-							},
-						],
-					},
-				],
-			},
+
 			{
 				displayName: 'Column Values',
 				name: 'columnValuesUploadFile',
@@ -1102,26 +1003,81 @@ export class Worktables implements INodeType {
 				},
 				options: [
 					{
-						displayName: 'Column Value',
-						name: 'columnValuesUploadFile',
-						values: [
+						displayName: 'Column Values',
+						name: 'columnValues',
+						type: 'fixedCollection',
+						typeOptions: {
+							multipleValues: true,
+						},
+						default: [],
+						options: [
 							{
-								displayName: 'Column',
-								name: 'columnId',
-								type: 'options',
-								description:
-									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
-								typeOptions: {
-									loadOptionsMethod: 'getColumnsFromBoard',
-								},
-								default: '',
-							},
-							{
-								displayName: 'File Name',
-								name: 'fileName',
-								type: 'string',
-								required: true,
-								default: '',
+								displayName: 'Value',
+								name: 'value',
+								values: [
+									{
+										displayName: 'Mode',
+										name: 'mode',
+										type: 'options',
+										default: 'fromList',
+										options: [
+											{
+												name: 'From list',
+												value: 'fromList',
+											},
+											{
+												name: 'Custom',
+												value: 'custom',
+											},
+										],
+									},
+									// Se for 'fromList'
+									{
+										displayName: 'Column',
+										name: 'columnId',
+										type: 'options',
+										typeOptions: {
+											loadOptionsDependsOn: ['boardId'],
+											loadOptionsMethod: 'getColumnsItems',
+										},
+										displayOptions: {
+											show: {
+												mode: ['fromList'],
+											},
+										},
+										default: '',
+									},
+									// Se for 'custom'
+									{
+										displayName: 'Custom Column ID',
+										name: 'customColumnId',
+										type: 'string',
+										displayOptions: {
+											show: {
+												mode: ['custom'],
+											},
+										},
+										default: '',
+									},
+									{
+										displayName: 'Custom Type',
+										name: 'customType',
+										type: 'string',
+										displayOptions: {
+											show: {
+												mode: ['custom'],
+											},
+										},
+										default: '',
+									},
+									// Sempre aparece
+									{
+										displayName: 'New Value',
+										name: 'newValue',
+										type: 'string',
+										default: '',
+									},
+								],
 							},
 						],
 					},
@@ -1336,7 +1292,6 @@ export class Worktables implements INodeType {
 				displayName: 'Update ID To Reply',
 				name: 'updateId',
 				type: 'string',
-
 				displayOptions: {
 					show: {
 						isReply: [true],
@@ -1462,6 +1417,7 @@ export class Worktables implements INodeType {
 	};
 
 	methods = {
+		listSearch: { getItemSearchList, getBoardSearchList, getColumnsItems },
 		loadOptions: {
 			async getWorkspaces() {
 				const credentials = await this.getCredentials('WorktablesApi');
@@ -1605,9 +1561,10 @@ export class Worktables implements INodeType {
 			},
 			async getGroupsFromBoard(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				console.log('Getting Groups');
-				const boardId = this.getCurrentNodeParameter('boardId') as string;
+				const boardId = this.getNodeParameter('boardId') as { value: string };
+				console.log('Board ID -> Groups: ', boardId?.value);
 
-				if (!boardId) {
+				if (!boardId?.value) {
 					throw new NodeApiError(this.getNode(), { message: 'Board ID is required.' });
 				}
 
@@ -1626,7 +1583,7 @@ export class Worktables implements INodeType {
 						'Content-Type': 'application/json',
 					},
 					body: {
-						query: `query { boards(ids: ${boardId} ) { groups { id title color position archived deleted} } }`,
+						query: `query { boards(ids: ${boardId?.value} ) { groups { id title color position archived deleted} } }`,
 					},
 				});
 
@@ -1928,8 +1885,14 @@ export class Worktables implements INodeType {
 					value: subitem.id,
 				}));
 			},
-			async getColumnsItems(this: ILoadOptionsFunctions) {
-				const boardId = this.getCurrentNodeParameter('boardId') as string;
+			/* async getColumnsItems(this: ILoadOptionsFunctions) {
+				console.log('Getting Columns');
+
+				return [
+					{ name: 'Teste 1', value: 'coluna_1' },
+					{ name: 'Teste 2', value: 'coluna_2' },
+				];
+			 const boardId = this.getCurrentNodeParameter('boardId') as string;
 
 				const credentials = await this.getCredentials('WorktablesApi');
 				const apiKey = credentials?.apiKey;
@@ -1968,7 +1931,7 @@ export class Worktables implements INodeType {
 				});
 
 				const parsedResponse = JSON.parse(response);
-
+				console.log('Parsed Response VALUE: ', parsedResponse);
 				return parsedResponse.data.boards[0].columns
 					.filter(
 						(column: { type: string }) =>
@@ -1987,8 +1950,8 @@ export class Worktables implements INodeType {
 							name: column.title,
 							value: column.id,
 						};
-					});
-			},
+					}); 
+			}, */
 			async getFolders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const workspaceId = this.getNodeParameter('workspace') as string;
 				const credentials = await this.getCredentials('WorktablesApi');
@@ -3001,36 +2964,107 @@ export class Worktables implements INodeType {
 					}
 
 					case 'updateItem': {
-						const itemId = this.getNodeParameter('itemId', 0) as string;
-						const boardId = this.getNodeParameter('boardId', 0) as string;
+						const itemId = this.getNodeParameter('itemId', 0) as { value: string };
+						const boardId = this.getNodeParameter('boardId', 0) as { value: string };
 
 						const columnValues = this.getNodeParameter('columnValues', 0) as {
-							columnValue: {
-								columnId: string;
+							value: {
+								columnId: {
+									value: string;
+									[key: string]: any;
+								};
 								newValue: string;
 							}[];
 						};
-						let column_values = '{}';
-						if (columnValues?.columnValue?.length > 0) {
-							column_values = `{ ${columnValues.columnValue
-								.map((columnValue) =>
-									JSON.stringify({ [columnValue.columnId]: columnValue.newValue }),
-								)
-								.join(', ')
-								.replace(/{/g, '')
-								.replace(/}/g, '')} }`;
+
+						const columnTypeResponse = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								'Content-Type': 'application/json',
+							},
+							body: {
+								query: `query {
+									boards(ids: ${boardId.value}) {
+										columns {
+											id
+											title
+											type
+										}
+									}
+								}`,
+							},
+						});
+
+						const columnsType = JSON.parse(columnTypeResponse).data?.boards[0].columns || [];
+						console.log('Columns Type Response:', columnTypeResponse);
+						console.log('Columns Type:', columnsType);
+
+						let column_values_object: Record<string, any> = {};
+
+						if (columnValues?.value?.length > 0) {
+							for (const columnValue of columnValues.value) {
+								const columnId = columnValue.columnId.value;
+								const newValue = columnValue.newValue;
+
+								const column = columnsType.find((col: any) => col.id === columnId);
+								const type = column?.type;
+
+								console.log('Column ID:', columnId);
+								console.log('Detected Type:', type);
+
+								if (!type) {
+									column_values_object[columnId] = newValue;
+									continue;
+								}
+
+								switch (type) {
+									case 'board_relation':
+									case 'connect_boards':
+										const itemIds = Array.isArray(newValue)
+											? newValue
+											: newValue.split(',').map((id) => id.trim());
+										column_values_object[columnId] = { item_ids: itemIds };
+										break;
+									case 'people':
+										const peopleIds = Array.isArray(newValue)
+											? newValue
+											: newValue.split(',').map((id) => id.trim());
+
+										column_values_object[columnId] = {
+											personsAndTeams: peopleIds.map((id: string) => ({
+												id: parseInt(id),
+												kind: 'person',
+											})),
+										};
+										break;
+
+									// add more cases as needed
+									// example:
+									// case 'status':
+									//     column_values_object[columnId] = { label: newValue };
+									//     break;
+
+									default:
+										column_values_object[columnId] = newValue;
+										break;
+								}
+							}
 						}
 
 						const mutation = `mutation {
-									change_multiple_column_values(
-										create_labels_if_missing: true
-										board_id: ${boardId},
-										item_id: "${itemId}",
-										column_values: ${JSON.stringify(column_values)}
-									) { id }
-								}`;
+							change_multiple_column_values(
+								create_labels_if_missing: true,
+								board_id: ${boardId.value},
+								item_id: "${itemId.value}",
+								column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"')}"
+							) {
+								id
+							}
+						}`;
 
-						console.log('Mutation: ', mutation);
+						console.log('Generated Mutation:', mutation);
 
 						response = await this.helpers.request({
 							method: 'POST',
@@ -3040,6 +3074,7 @@ export class Worktables implements INodeType {
 						});
 						break;
 					}
+
 					case 'createItem': {
 						const itemName = this.getNodeParameter('itemName', 0) as string;
 						const groupId = this.getNodeParameter('groupId', 0) as string;
@@ -3838,13 +3873,13 @@ export class Worktables implements INodeType {
 				}
 				break;
 			}
+			case 'updateValue': {
+			}
 
 			default:
 				throw new NodeApiError(this.getNode(), { message: `Unsupported resource: ${resource}` });
 		}
 		response = await parseApiResponse(response);
-
-		console.log('Response res: ', JSON.stringify(response, null, 2));
 
 		if (response.success) {
 			const parsed = JSON.parse(response.data);
