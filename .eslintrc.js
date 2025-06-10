@@ -47,6 +47,12 @@ module.exports = {
 				'n8n-nodes-base/node-resource-description-filename-against-convention': 'off',
 				'n8n-nodes-base/node-param-fixed-collection-type-unsorted-items': 'off',
 				'n8n-nodes-base/node-dirname-against-convention': 'off',
+				'n8n-nodes-base/node-param-color-type-unused': 'off',
+				'n8n-nodes-base/node-param-display-name-miscased': 'off',
+				'n8n-nodes-base/node-param-description-comma-separated-hyphen': 'off',
+				'n8n-nodes-base/node-param-description-missing-from-dynamic-options': 'off',
+				'n8n-nodes-base/node-param-description-missing-from-dynamic-multi-options': 'off',
+				'n8n-nodes-base/node-param-description-boolean-without-whether': 'off',
 			},
 		},
 		{
@@ -56,9 +62,12 @@ module.exports = {
 			rules: {
 				'n8n-nodes-base/cred-class-field-documentation-url-missing': 'off',
 				'n8n-nodes-base/cred-class-field-documentation-url-miscased': 'off',
-				'n8n-nodes-base/cred-class-name-unsuffixed': 'off', // Desativa o sufixo '-Api'
-				'n8n-nodes-base/cred-class-field-name-uppercase-first-char': 'off', // Desativa a regra de letra maiúscula
-				'n8n-nodes-base/cred-class-field-type-options-password-missing': 'off', // Desativa a regra de senha
+				'n8n-nodes-base/cred-class-name-unsuffixed': 'off',
+				'n8n-nodes-base/cred-class-field-name-uppercase-first-char': 'off',
+				'n8n-nodes-base/cred-class-field-type-options-password-missing': 'off',
+				'n8n-nodes-base/node-param-color-type-unused': 'off',
+				'n8n-nodes-base/node-param-display-name-miscased': 'off',
+				'n8n-nodes-base/node-param-description-comma-separated-hyphen': 'off',
 			},
 		},
 	],

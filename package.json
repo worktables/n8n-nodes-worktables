@@ -1,7 +1,6 @@
 {
   "name": "@worktables/n8n-nodes-worktables",
-  "version": "10.30.12",
-
+  "version": "11.0.0",
   "description": "n8n nodes for Monday.com integration",
   "keywords": [
     "n8n-community-node-package"
@@ -50,6 +49,8 @@
     "n8n-workflow": "*"
   },
   "dependencies": {
-    "fetch-blob": "^4.0.0"
+    "axios": "^1.9.0",
+    "fetch-blob": "^4.0.0",
+    "form-data": "^4.0.2"
   }
 }
