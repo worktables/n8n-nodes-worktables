@@ -14,11 +14,14 @@ import {
 	IExecuteFunctions,
 	INodeExecutionData,
 	NodeApiError,
+	IDataObject,
 } from 'n8n-workflow';
 import { parseApiResponse } from '../../utils/isErrorResponse';
 import FormData from 'form-data';
 import axios from 'axios';
 import { parseValue } from '../../utils/parseValue';
+
+import countryCodes from '../../utils/country_codes.json';
 
 export class Worktables implements INodeType {
 	description: INodeTypeDescription = {
@@ -32,6 +35,7 @@ export class Worktables implements INodeType {
 		defaults: {
 			name: 'Worktables',
 		},
+		usableAsTool: true,
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
 		credentials: [
@@ -46,6 +50,27 @@ export class Worktables implements INodeType {
 				'Content-Type': 'application/json',
 			},
 		},
+		codex: {
+			categories: ['Collaboration'],
+			subcategories: {
+				Collaboration: [''],
+			},
+			alias: ['monday', 'boards', 'work management'],
+			resources: {
+				primaryDocumentation: [
+					{
+						url: '',
+					},
+				],
+				credentialDocumentation: [
+					{
+						url: '',
+					},
+				],
+			},
+		},
+		// ...
+
 		properties: [
 			// Resource Selection
 			{
@@ -53,9 +78,10 @@ export class Worktables implements INodeType {
 				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
+
 				options: [
-					{ name: 'Board', value: 'board', description: 'Operations related to boards' },
 					{ name: 'Item', value: 'item', description: 'Operations related to items' },
+					{ name: 'Board', value: 'board', description: 'Operations related to boards' },
 					{ name: 'Subitem', value: 'subitem', description: 'Operations related to subitems' },
 					{ name: 'Update', value: 'update', description: 'Operations related to updates' },
 					{ name: 'Team', value: 'team', description: 'Operations related to teams' },
@@ -65,15 +91,12 @@ export class Worktables implements INodeType {
 						value: 'downloadFile',
 						description: 'Download a file from Monday.com',
 					},
-					{
-						name: 'Query',
-						value: 'query',
-						description: 'Operations related to running queries',
-					},
+					{ name: 'Query', value: 'query', description: 'Operations related to running queries' },
 				],
 				default: 'board',
 				required: true,
-				description: 'Select the category of actions to perform',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
 			},
 
 			// Boards Operations
@@ -82,6 +105,7 @@ export class Worktables implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+
 				options: [
 					{
 						name: 'List Boards',
@@ -173,7 +197,7 @@ export class Worktables implements INodeType {
 						name: 'Run API',
 						value: 'query',
 						description: 'Run a custom query',
-						action: 'Run api a query',
+						action: 'Run API query',
 					},
 				],
 				default: 'query',
@@ -208,6 +232,12 @@ export class Worktables implements INodeType {
 						action: 'Update column values of an item',
 					},
 					{
+						name: 'Create or Update Item',
+						value: 'createOrUpdateItem',
+						description: 'Create a new item or update existing one based on item ID',
+						action: 'Create or update an item',
+					},
+					{
 						name: 'Delete an Item',
 						value: 'deleteItem',
 						description: 'Delete an item from a board',
@@ -237,6 +267,12 @@ export class Worktables implements INodeType {
 						description: 'Search items in a board using a filter',
 						action: 'Search items by filter',
 					},
+					/* {
+						name: 'Advanced Search Items',
+						value: 'searchItemsAdvanced',
+						description: 'Advanced search with date ranges, numeric comparisons, and complex filters',
+						action: 'Advanced search items',
+					}, */
 					{
 						name: 'List Item Subscribers',
 						value: 'listItemSubscribers',
@@ -249,7 +285,7 @@ export class Worktables implements INodeType {
 						action: 'Upload files to column',
 					},
 				],
-				default: 'createItem',
+				default: 'createOrUpdateItem',
 				required: true,
 				displayOptions: {
 					show: { resource: ['item'] },
@@ -303,7 +339,7 @@ export class Worktables implements INodeType {
 						name: 'Upload files to update',
 						value: 'uploadFile',
 						description: 'Upload a file to an update',
-						action: 'Upload an update',
+						action: 'Upload files to update',
 					},
 				],
 				default: 'listUpdates',
@@ -346,12 +382,6 @@ export class Worktables implements INodeType {
 						value: 'listTeams',
 						description: 'List all teams',
 						action: 'List teams',
-					},
-					{
-						name: 'List Members of a Team',
-						value: 'listTeamMembers',
-						description: 'List all members of a specific team',
-						action: 'List members of a team',
 					},
 					{
 						name: 'Get a Team',
@@ -457,6 +487,20 @@ export class Worktables implements INodeType {
 
 			// Fields
 
+			// Item subscribers
+			{
+				displayName: 'Item ID',
+				name: 'itemId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: {
+					show: {
+						operation: ['listItemSubscribers'],
+					},
+				},
+			},
+
 			// Download File Fields
 			{
 				displayName: 'Asset ID',
@@ -483,25 +527,20 @@ export class Worktables implements INodeType {
 					'Select a workspace. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
-						operation: [
-							'createBoard',
-							'duplicateBoard',
-							'listBoards',
-							'listBoardGroups',
-							'listBoardActivityLogs',
-							'listBoardSubscribers',
-						],
+						operation: ['createBoard', 'listBoardGroups'],
 					},
 				},
 			},
+
 			{
-				displayName: 'Board',
+				displayName: 'New Board Name', // Board Name
 				name: 'boardName',
 				type: 'string',
 				default: '',
 				description: 'Enter the board name',
 				displayOptions: { show: { operation: ['createBoard', 'duplicateBoard'] } },
 			},
+
 			{
 				displayName: 'Board Kind',
 				name: 'boardKind',
@@ -538,7 +577,7 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['createBoard'] } },
 			},
 			{
-				displayName: 'Template',
+				displayName: 'Template ID',
 				name: 'templateId',
 				type: 'string',
 				default: '',
@@ -586,6 +625,32 @@ export class Worktables implements INodeType {
 				displayOptions: { show: { operation: ['listBoards'] } },
 			},
 			{
+				displayName: 'Filter by Workspace',
+				name: 'filterByWorkspace',
+				type: 'boolean',
+				default: false,
+				description:
+					'Whether to filter the boards by workspace. If enabled, you must select a workspace.',
+				displayOptions: {
+					show: { operation: ['listBoards'] },
+				},
+			},
+			{
+				displayName: 'Workspace',
+				name: 'workspace',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getWorkspaces' },
+				default: '',
+				description:
+					'Select a workspace. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['listBoards'],
+						filterByWorkspace: [true],
+					},
+				},
+			},
+			{
 				displayName: 'Board',
 				name: 'boardId',
 				type: 'options',
@@ -604,23 +669,54 @@ export class Worktables implements INodeType {
 							'createSubitem',
 							'createItem',
 							'updateItem',
-
+							'createOrUpdateItem',
 							'listBoardGroups',
 							'createGroup',
 							'duplicateGroup',
-							'duplicateBoard',
-							'listBoardActivityLogs',
 							'listBoardSubscribers',
 							'addBoardSubscribers',
+							'listBoardActivityLogs',
 							'removeBoardSubscribers',
-							'listUpdates',
-							'createUpdate',
+							'listGroupItems',
 						],
 					},
 				},
 			},
 			{
-				displayName: 'Folder',
+				displayName: 'Board to Duplicate',
+				name: 'boardId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getBoards',
+					// loadOptionsDependsOn: ['workspace', 'limit', 'state', 'orderBy', 'boardKind'],
+				},
+				default: '',
+				required: true,
+				description:
+					'Select a Monday board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['duplicateBoard'],
+					},
+				},
+			},
+			{
+				displayName: 'Destination Workspace',
+				name: 'workspace',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getWorkspaces' },
+				default: '',
+				required: true,
+				description:
+					'Select a workspace. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['duplicateBoard'],
+					},
+				},
+			},
+			{
+				displayName: 'Destination Folder',
 				name: 'folder',
 				type: 'options',
 				typeOptions: { loadOptionsDependsOn: ['workspace'], loadOptionsMethod: 'getFolders' },
@@ -628,7 +724,18 @@ export class Worktables implements INodeType {
 				default: '',
 				description:
 					'Select a folder. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
-				displayOptions: { show: { operation: ['createFolder', 'duplicateBoard', 'createBoard'] } },
+				displayOptions: { show: { operation: ['duplicateBoard'] } },
+			},
+			{
+				displayName: 'Folder ID',
+				name: 'folder',
+				type: 'options',
+				typeOptions: { loadOptionsDependsOn: ['workspace'], loadOptionsMethod: 'getFolders' },
+				required: true,
+				default: '',
+				description:
+					'Select a folder. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: { show: { operation: ['createBoard'] } },
 			},
 			{
 				displayName: 'Keep Subscribers',
@@ -669,17 +776,44 @@ export class Worktables implements INodeType {
 				description:
 					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
-					show: { operation: ['createItem', 'duplicateGroup'], isSubitem: [false] },
+					show: { operation: ['createItem'], isSubitem: [false] },
+				},
+			},
+
+			{
+				displayName: 'Group',
+				name: 'groupId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsDependsOn: ['boardId'],
+					loadOptionsMethod: 'getGroupsFromBoard',
+				},
+				default: 'topics',
+				required: true,
+				description:
+					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: { operation: ['duplicateGroup'] },
 				},
 			},
 			{
-				displayName: 'Group',
+				displayName: 'Group Name',
 				name: 'groupName',
 				type: 'string',
 				default: '',
 				description: 'Enter the group name',
 				displayOptions: {
 					show: { operation: ['createGroup', 'duplicateGroup'] },
+				},
+			},
+			{
+				displayName: 'Add to top',
+				name: 'addToTop',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to add the group to the top of the board',
+				displayOptions: {
+					show: { operation: ['duplicateGroup'] },
 				},
 			},
 			{
@@ -802,6 +936,7 @@ export class Worktables implements INodeType {
 					},
 				],
 			},
+
 			/* {
 				displayName: 'Team Subscribers',
 				name: 'teamIds',
@@ -838,6 +973,18 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['addUsersToTeam', 'removeUsersFromTeam'],
+					},
+				},
+			},
+			{
+				displayName: 'Team ID',
+				name: 'teamId',
+				type: 'string',
+				default: '',
+
+				displayOptions: {
+					show: {
+						operation: ['deleteTeam'],
 					},
 				},
 			},
@@ -900,6 +1047,19 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
+				displayName: 'Group ID',
+				name: 'groupId',
+				type: 'string',
+				default: '',
+				required: true,
+				description:
+					'Select a group from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				hint: 'The group to which the new group will be relative to.',
+				displayOptions: {
+					show: { operation: ['getGroup', 'listGroupItems'] }, // before resource: ['item']
+				},
+			},
+			{
 				displayName: 'Position Relative',
 				name: 'positionRelative',
 				type: 'options',
@@ -929,10 +1089,38 @@ export class Worktables implements INodeType {
 					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
-						operation: ['updateItem', 'createSubitem', 'listUpdates', 'createUpdate'],
+						operation: ['updateItem', 'createSubitem'],
 					},
 				},
 			},
+			{
+				displayName: 'Item ID (Optional)',
+				name: 'itemIdOptional',
+				type: 'string',
+				default: '',
+				description:
+					'Item ID to update. If left empty, a new item will be created. If provided, the existing item will be updated.',
+				displayOptions: {
+					show: {
+						operation: ['createOrUpdateItem'],
+					},
+				},
+			},
+			{
+				displayName: 'Item',
+				name: 'itemId',
+				type: 'string',
+				default: '',
+				required: true,
+				description:
+					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['createUpdate', 'listUpdates'],
+					},
+				},
+			},
+
 			{
 				displayName: 'Board',
 				name: 'boardId',
@@ -946,7 +1134,7 @@ export class Worktables implements INodeType {
 					'Select a Monday board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
-						operation: ['duplicateItem', 'searchItems', 'uploadItemFile'],
+						operation: ['duplicateItem', 'searchItems', 'searchItemsAdvanced', 'uploadItemFile', 'getGroup'],
 					},
 				},
 			},
@@ -1009,6 +1197,32 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
+				displayName: 'Fetch All Columns',
+				name: 'fetchAllColumns',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to fetch all columns or only specific ones',
+				displayOptions: {
+					show: {
+						operation: ['getItem'],
+					},
+				},
+			},
+			{
+				displayName: 'Column IDs',
+				name: 'columnIds',
+				type: 'string',
+				default: '',
+				required: false,
+				description: 'Comma-separated list of column IDs to fetch (e.g., text, number, date). Only used when "Fetch All Columns" is disabled.',
+				displayOptions: {
+					show: {
+						operation: ['getItem'],
+						fetchAllColumns: [false],
+					},
+				},
+			},
+			{
 				displayName: 'Item ID',
 				name: 'itemId',
 				type: 'string',
@@ -1044,7 +1258,7 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['item', 'subitem'],
-						operation: ['createItem', 'createSubitem'],
+						operation: ['createItem', 'createSubitem', 'createOrUpdateItem'],
 					},
 				},
 			},
@@ -1057,7 +1271,7 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['item'],
-						operation: ['createItem'],
+						operation: ['createItem', 'createOrUpdateItem'],
 					},
 				},
 			},
@@ -1072,7 +1286,7 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['item'],
-						operation: ['createItem'],
+						operation: ['createItem', 'createOrUpdateItem'],
 						isSubitem: [true],
 					},
 				},
@@ -1092,7 +1306,7 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['item', 'subitem'],
-						operation: ['createItem', 'updateItem', 'createSubitem'],
+						operation: ['createItem', 'updateItem', 'createSubitem', 'createOrUpdateItem'],
 					},
 				},
 				options: [
@@ -1116,15 +1330,20 @@ export class Worktables implements INodeType {
 								type: 'options',
 								options: [
 									{ name: 'Simple Column Value', value: 'simple' },
-									{ name: 'Checkbox', value: 'checkbox' },
-									{ name: 'Connect Boards', value: 'board_relation' },
-									{ name: 'People', value: 'people' },
-									{ name: 'Date', value: 'date' },
-									{ name: 'Location', value: 'location' },
-									{ name: 'Link', value: 'link' },
-									{ name: 'Email', value: 'email' },
-									// { name: 'Phone', value: 'phone' },
-									{ name: 'Timeline', value: 'timeline' },
+									{ name: 'Column Value', value: 'objectValue' },
+									...[
+										{ name: 'Button', value: 'button' },
+										{ name: 'File Link', value: 'fileLink' },
+										{ name: 'Checkbox', value: 'checkbox' },
+										{ name: 'Connect Boards', value: 'board_relation' },
+										{ name: 'People', value: 'people' },
+										{ name: 'Date', value: 'date' },
+										{ name: 'Location', value: 'location' },
+										{ name: 'Link', value: 'link' },
+										{ name: 'Email', value: 'email' },
+										{ name: 'Phone', value: 'phone' },
+										{ name: 'Timeline', value: 'timeline' },
+									].sort((a, b) => a.name.localeCompare(b.name)),
 								],
 								default: 'simple',
 							},
@@ -1142,6 +1361,68 @@ export class Worktables implements INodeType {
 								},
 							},
 
+							{
+								displayName: 'Column Value',
+								name: 'objectValue',
+								type: 'json',
+								default: '',
+								description:
+									'Enter the column value as a JSON object. Use an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a> to specify a dynamic value.',
+								displayOptions: {
+									show: {
+										columnType: ['objectValue'],
+									},
+								},
+							},
+							// File link
+							{
+								displayName: 'Files',
+								name: 'fileLinks',
+								type: 'fixedCollection',
+								typeOptions: {
+									multipleValues: true,
+								},
+								default: [],
+								displayOptions: {
+									show: {
+										columnType: ['fileLink'],
+									},
+								},
+								options: [
+									{
+										displayName: 'File',
+										name: 'file',
+										values: [
+											{
+												displayName: 'Link',
+												name: 'linkToFile',
+												type: 'string',
+												default: '',
+												description: 'The direct link to the file',
+											},
+											{
+												displayName: 'Name',
+												name: 'name',
+												type: 'string',
+												default: '',
+												description: 'The name of the file',
+											},
+										],
+									},
+								],
+							},
+							// Button
+							{
+								displayName: 'Click',
+								name: 'buttonValue',
+								type: 'boolean',
+								default: false,
+								displayOptions: {
+									show: {
+										columnType: ['button'],
+									},
+								},
+							},
 							// Checkbox
 							{
 								displayName: 'Checked',
@@ -1257,10 +1538,25 @@ export class Worktables implements INodeType {
 
 							// Phone
 							{
+								displayName: 'Country Code',
+								name: 'countryCode',
+								type: 'options',
+								options: countryCodes,
+								default: '',
+								description: 'Select the country code for the phone number',
+								displayOptions: {
+									show: {
+										columnType: ['phone'],
+									},
+								},
+							},
+							{
 								displayName: 'Phone',
 								name: 'phoneValue',
 								type: 'string',
 								default: '',
+								description:
+									'Enter the phone number. Do **not** include the country code — only the area code and the number. Use an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a> to specify a dynamic value.',
 								displayOptions: {
 									show: {
 										columnType: ['phone'],
@@ -1445,6 +1741,61 @@ export class Worktables implements INodeType {
 					},
 				},
 			},
+			// Advanced Search Parameters
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				default: 50,
+				description: 'Max number of results to return',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+				typeOptions: {
+					minValue: 1,
+				},
+			},
+			{
+				displayName: 'Cursor',
+				name: 'cursor',
+				type: 'string',
+				default: '',
+				description: 'Cursor for pagination (get from previous response)',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+			},
+			{
+				displayName: 'Search Term',
+				name: 'searchTerm',
+				type: 'string',
+				default: '',
+				description: 'Search term for text-based search across items',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+			},
+			{
+				displayName: 'Fetch Column Values',
+				name: 'fetchColumnValuesAdvanced',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to fetch column values',
+				displayOptions: {
+					show: {
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+			},
 			{
 				displayName: 'Filter Rules',
 				name: 'filterRules',
@@ -1488,6 +1839,81 @@ export class Worktables implements INodeType {
 								options: [
 									{ name: 'Any Of', value: 'any_of' },
 									{ name: 'Not Any Of', value: 'not_any_of' },
+									{ name: 'Equals', value: 'equals' },
+									{ name: 'Is Empty', value: 'is_empty' },
+									{ name: 'Is Not Empty', value: 'is_not_empty' },
+									{ name: 'Greater Than', value: 'greater_than' },
+									{ name: 'Greater Than or Equal', value: 'greater_than_or_equals' },
+									{ name: 'Less Than', value: 'lower_than' },
+									{ name: 'Less Than or Equal', value: 'lower_than_or_equal' },
+									{ name: 'Between', value: 'between' },
+									{ name: 'Contains Text', value: 'contains_text' },
+									{ name: 'Does Not Contain Text', value: 'not_contains_text' },
+									{ name: 'Contains Terms', value: 'contains_terms' },
+									{ name: 'Starts With', value: 'starts_with' },
+									{ name: 'Ends With', value: 'ends_with' },
+									{ name: 'Within the Next', value: 'within_the_next' },
+									{ name: 'Within the Last', value: 'within_the_last' },
+								],
+								default: 'any_of',
+								description: 'The condition for value comparison',
+							},
+							{
+								displayName: 'Compare Value',
+								name: 'compareValue',
+								type: 'string',
+								default: '',
+								description: 'The value to filter by (format depends on column type)',
+							},
+						],
+					},
+				],
+			},
+			// Advanced Filter Rules
+			{
+				displayName: 'Advanced Filter Rules',
+				name: 'advancedFilterRules',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Rule',
+						name: 'rule',
+						values: [
+							{
+								displayName: 'Column',
+								name: 'columnId',
+								type: 'options',
+								description:
+									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
+								typeOptions: {
+									loadOptionsDependsOn: ['boardId'],
+									loadOptionsMethod: 'getColumnsItems',
+								},
+								default: '',
+							},
+							{
+								displayName: 'Compare Attribute',
+								name: 'compareAttribute',
+								type: 'string',
+								default: '',
+								description: 'Optional attribute for comparison (dependent on column type)',
+							},
+							{
+								displayName: 'Operator',
+								name: 'operator',
+								type: 'options',
+								options: [
+									{ name: 'Any Of', value: 'any_of' },
+									{ name: 'Not Any Of', value: 'not_any_of' },
+									{ name: 'Equals', value: 'equals' },
 									{ name: 'Is Empty', value: 'is_empty' },
 									{ name: 'Is Not Empty', value: 'is_not_empty' },
 									{ name: 'Greater Than', value: 'greater_than' },
@@ -1518,6 +1944,29 @@ export class Worktables implements INodeType {
 				],
 			},
 			{
+				displayName: 'Logical Operator',
+				name: 'logicalOperatorAdvanced',
+				type: 'options',
+				options: [
+					{
+						name: 'AND',
+						value: 'and',
+					},
+					{
+						name: 'OR',
+						value: 'or',
+					},
+				],
+				default: 'and',
+				description: 'Logical operator to use between filter rules',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
+					},
+				},
+			},
+			{
 				displayName: 'Sort Options',
 				name: 'sortOptions',
 				type: 'fixedCollection',
@@ -1527,6 +1976,50 @@ export class Worktables implements INodeType {
 					show: {
 						resource: ['item'],
 						operation: ['searchItems'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Sort By',
+						name: 'sortBy',
+						values: [
+							{
+								displayName: 'Column',
+								name: 'columnId',
+								type: 'options',
+								description:
+									'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
+								typeOptions: {
+									loadOptionsDependsOn: ['boardId'],
+									loadOptionsMethod: 'getColumnsItems',
+								},
+								default: '',
+							},
+							{
+								displayName: 'Direction',
+								name: 'direction',
+								type: 'options',
+								options: [
+									{ name: 'Ascending', value: 'asc' },
+									{ name: 'Descending', value: 'desc' },
+								],
+								default: 'asc',
+								description: 'The sort direction',
+							},
+						],
+					},
+				],
+			},
+			{
+				displayName: 'Advanced Sort Options',
+				name: 'advancedSortOptions',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true },
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['searchItemsAdvanced'],
 					},
 				},
 				options: [
@@ -1601,6 +2094,20 @@ export class Worktables implements INodeType {
 
 			// Update Fields
 			{
+				displayName: 'Update ID',
+				name: 'updateId',
+				type: 'string',
+
+				displayOptions: {
+					show: {
+						operation: ['updateUpdate', 'deleteUpdate', 'uploadFile'],
+					},
+				},
+				default: '',
+				description:
+					'Select an update from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+			},
+			{
 				displayName: 'Body Content',
 				name: 'bodyContent',
 				type: 'string',
@@ -1627,6 +2134,63 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
+				// This is supported only in API 2025-07 (Release Candidate) and later.
+				// Hide until release candidate is stable.
+				displayName: 'Mention',
+				name: 'mention',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to mention the users, teams or boards in the update',
+				displayOptions: {
+					show: {
+						operation: ['__never_show__'],
+						//operation: ['createUpdate', 'updateUpdate'],
+					},
+				},
+			},
+			{
+				displayName: 'Mentions List (Users, Teams, Boards)',
+				name: 'mentionsList',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				default: [],
+				displayOptions: {
+					show: {
+						operation: ['createUpdate', 'updateUpdate'],
+						mention: [true],
+					},
+				},
+				options: [
+					{
+						displayName: 'Mention',
+						name: 'mention',
+						values: [
+							{
+								displayName: 'Type',
+								name: 'type',
+								type: 'options',
+								options: [
+									{ name: 'User', value: 'User' },
+									{ name: 'Team', value: 'Team' },
+									{ name: 'Board', value: 'Board' },
+								],
+								default: 'User',
+							},
+							{
+								displayName: 'ID',
+								name: 'id',
+								type: 'string',
+								default: '',
+								description:
+									'ID of the mentioned entity (User, Team, or Board). You can use an expression to insert it dynamically.',
+							},
+						],
+					},
+				],
+			},
+			{
 				displayName: 'Attachments (Binary Properties)',
 				name: 'attachmentsUpdate',
 				type: 'string',
@@ -1648,20 +2212,6 @@ export class Worktables implements INodeType {
 					show: {
 						isReply: [true],
 						operation: ['createUpdate'],
-					},
-				},
-				default: '',
-				description:
-					'Select an update from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
-			},
-			{
-				displayName: 'Update ID',
-				name: 'updateId',
-				type: 'string',
-
-				displayOptions: {
-					show: {
-						operation: ['updateUpdate', 'deleteUpdate', 'uploadFile'],
 					},
 				},
 				default: '',
@@ -1808,9 +2358,11 @@ export class Worktables implements INodeType {
 						hasMore = false;
 					}
 				}
-
-				allWorkspace.push({ name: 'Main workspace', value: '-1' }); // TODO -> get main workspace name
-				return allWorkspace.sort((a, b) => a.name.localeCompare(b.name));
+				const sorted = allWorkspace
+					.filter((w) => w.value !== '-1')
+					.sort((a, b) => a.name.localeCompare(b.name));
+				sorted.unshift({ name: 'Main Workspace', value: '-1' });
+				return sorted;
 			},
 			async getBoards() {
 				const credentials = await this.getCredentials('WorktablesApi');
@@ -1838,24 +2390,6 @@ export class Worktables implements INodeType {
 				const boardKindFilter =
 					boardKind === 'all' || !boardKind ? '' : `, board_kind: ${boardKind}`;
 
-				const query = JSON.stringify({
-					query: `{
-						boards(
-							limit: ${queryLimit},
-							page: ${page},
-							state: ${state ? state : 'active'}
-							${orderByFilter}
-							${boardKindFilter}
-						) {
-							id
-							name
-							type
-						}
-					}`,
-				});
-
-				console.log('Query: ', query);
-
 				while (hasMore) {
 					const currentQuery = JSON.stringify({
 						query: `{
@@ -1873,8 +2407,6 @@ export class Worktables implements INodeType {
 						}`,
 					});
 
-					console.log('Query (page ' + page + '): ', currentQuery);
-
 					const responseData = await this.helpers.request({
 						method: 'POST',
 						url: 'https://api.monday.com/v2',
@@ -1891,8 +2423,6 @@ export class Worktables implements INodeType {
 							.filter((board: any) => board.type === 'board' || board.type === 'sub_items_board')
 							.map((board: any) => ({ name: board.name, value: board.id })),
 					);
-
-					console.log('Boards length: ', boards.length);
 
 					if (boards.length < queryLimit) {
 						console.log('No more boards');
@@ -2275,7 +2805,6 @@ export class Worktables implements INodeType {
 						(column: { type: string }) =>
 							column.type !== 'subitem' &&
 							column.type !== 'auto_number' &&
-							column.type !== 'button' &&
 							column.type !== 'creation_log' &&
 							column.type !== 'formula' &&
 							column.type !== 'item_id' &&
@@ -2642,7 +3171,7 @@ export class Worktables implements INodeType {
 									board_kind: ${boardKind},
 									workspace_id: ${workspace}
 									${arg}
-								) { id }
+								) { id url }
 							}
 							`;
 						console.log(mutation);
@@ -2661,6 +3190,7 @@ export class Worktables implements INodeType {
 						const boardName = this.getNodeParameter('boardName', 0) as string;
 						const keepSubscribers = this.getNodeParameter('keepSubscribers', 0) as boolean;
 						const folder = this.getNodeParameter('folder', 0) as string;
+						const workspaceId = this.getNodeParameter('workspace', 0) as string;
 
 						if (!boardId) {
 							throw new NodeApiError(this.getNode(), { message: 'Board ID is required.' });
@@ -2679,7 +3209,7 @@ export class Worktables implements INodeType {
 							},
 							body: {
 								query: `mutation {
-								duplicate_board(board_id: ${boardId}, duplicate_type: ${duplicateType}, board_name: "${boardName}", keep_subscribers: ${keepSubscribers}
+								duplicate_board(board_id: ${boardId}, workspace_id: ${workspaceId}, duplicate_type: ${duplicateType}, board_name: "${boardName}", keep_subscribers: ${keepSubscribers}
 								${folder === '-1' ? '' : `, folder_id: ${folder}`}) {
 										board {
 											id
@@ -2696,6 +3226,7 @@ export class Worktables implements INodeType {
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 						const groupId = this.getNodeParameter('groupId', 0) as string;
 						const groupName = this.getNodeParameter('groupName', 0) as string;
+						const addToTop = this.getNodeParameter('addToTop', 0) as boolean;
 
 						if (!boardId || !groupId) {
 							throw new NodeApiError(this.getNode(), {
@@ -2706,6 +3237,7 @@ export class Worktables implements INodeType {
 						if (!apiKey) {
 							throw new NodeApiError(this.getNode(), { message: 'API Key not found' });
 						}
+
 						console.log(`mutation {
 									duplicate_group(board_id: ${boardId}, group_id: "${groupId}", group_title: ${groupName}) {
 										id
@@ -2721,7 +3253,9 @@ export class Worktables implements INodeType {
 							},
 							body: {
 								query: `mutation {
-										duplicate_group(board_id: ${boardId}, group_id: "${groupId}", group_title: "${groupName}") {
+										duplicate_group(board_id: ${boardId}, group_id: "${groupId}", group_title: "${groupName}" ${
+									addToTop ? ', add_to_top: true' : ''
+								}) {
 											id
 											title
 										}
@@ -2879,7 +3413,8 @@ export class Worktables implements INodeType {
 						console.log('List boards: ');
 
 						const credentials = await this.getCredentials('WorktablesApi');
-						const workspaceId = this.getNodeParameter('workspace', 0) as string;
+						const filterByWorkspace = this.getNodeParameter('filterByWorkspace', 0) as boolean;
+						const workspaceId = this.getNodeParameter('workspace', 0, '') as string;
 						const limit = this.getNodeParameter('limit', 0) as number;
 						const boardKind = this.getNodeParameter('boardKind', 0) as string;
 						const orderBy = this.getNodeParameter('orderBy', 0) as string;
@@ -2890,6 +3425,11 @@ export class Worktables implements INodeType {
 						if (!apiKey) {
 							throw new NodeApiError(this.getNode(), { message: 'API Key not found' });
 						}
+
+						const workspaceFilter =
+							filterByWorkspace && workspaceId
+								? `workspace_ids: ${JSON.stringify(workspaceId)},`
+								: '';
 
 						const allBoards: { name: string; value: string }[] = [];
 						let page = 1;
@@ -2910,7 +3450,7 @@ export class Worktables implements INodeType {
 											boards(
 												limit: ${queryLimit},
 												page: ${page},
-												workspace_ids: ${workspaceId},
+												${workspaceFilter}
 												state: ${state}
 												${orderBy === 'none' ? `` : `, order_by: ${orderBy}`}
 												${boardKind === 'all' ? `` : `, board_kind: ${boardKind}`}
@@ -3204,9 +3744,36 @@ export class Worktables implements INodeType {
 			}
 			case 'item': {
 				switch (operation) {
+					case 'listItemSubscribers': {
+						const itemId = this.getNodeParameter('itemId', 0) as string;
+						const query = `
+						{
+							items (ids: ["${itemId}"]) {
+								subscribers {
+								email
+								account {
+									id
+									name
+								}
+								}
+							}
+							}
+						`;
+
+						response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query: query },
+						});
+
+						break;
+					}
 					case 'getItem': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const isSubitem = this.getNodeParameter('isSubitem', 0) as boolean;
+						const fetchAllColumns = this.getNodeParameter('fetchAllColumns', 0) as boolean;
+						const columnIds = this.getNodeParameter('columnIds', 0) as string;
 
 						const fetchSubitems =
 							!isSubitem && (this.getNodeParameter('fetchSubitems', 0) as boolean);
@@ -3214,27 +3781,63 @@ export class Worktables implements INodeType {
 						const fetchParentItem =
 							isSubitem && (this.getNodeParameter('fetchParentItems', 0) as boolean);
 
-						const queryColumnValues = `
-							column_values {
-								id
-								text
-								value
-								type
-								... on BoardRelationValue {
-									display_value
-									linked_item_ids
-								}
-								... on MirrorValue {
-									display_value
-									mirrored_items {
-										linked_board_id
+						// Build column values query based on fetchAllColumns setting
+						let queryColumnValues = '';
+						if (fetchAllColumns) {
+							queryColumnValues = `
+								column_values {
+									id
+									text
+									value
+									type
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
 									}
 								}
+							`;
+						} else if (columnIds && columnIds.trim()) {
+							// Parse column IDs and build specific column query
+							const specificColumnIds = columnIds.split(',').map(id => id.trim()).filter(id => id);
+							if (specificColumnIds.length > 0) {
+								const columnIdsString = specificColumnIds.map(id => `"${id}"`).join(', ');
+								queryColumnValues = `
+									column_values(ids: [${columnIdsString}]) {
+										id
+										text
+										value
+										type
+										... on BoardRelationValue {
+											display_value
+											linked_item_ids
+										}
+										... on MirrorValue {
+											display_value
+											mirrored_items {
+												linked_board_id
+											}
+										}
+									}
+								`;
 							}
-						`;
+						}
 
 						const querySubitems = `
 							subitems {
+								id
+								name
+								url
+								board {
+									id
+								}
+								created_at
+								updated_at
 								${queryColumnValues}
 							}
 						`;
@@ -3243,6 +3846,10 @@ export class Worktables implements INodeType {
 							parent_item {
 								id
 								name
+								url
+								board {
+									id
+								}
 								created_at
 								updated_at
 								${queryColumnValues}
@@ -3254,6 +3861,16 @@ export class Worktables implements INodeType {
 							items(ids: ["${itemId}"]) {
 								id
 								name
+								url
+								board {
+									id
+								}
+								group {
+									id
+									title
+									color
+									position
+								}
 								created_at
 								updated_at
 								${queryColumnValues}
@@ -3282,6 +3899,12 @@ export class Worktables implements INodeType {
 							name: item.name,
 							created_at: item.created_at,
 							updated_at: item.updated_at,
+							group: {
+								id: item.group.id,
+								title: item.group.title,
+								color: item.group.color,
+								position: item.group.position,
+							},
 							column_values: {},
 						};
 
@@ -3310,36 +3933,39 @@ export class Worktables implements INodeType {
 						}
 
 						if (item.subitems && Array.isArray(item.subitems)) {
-							formatted.subitems = item.subitems.map(async (subitem: any) => {
-								const subFormatted: Record<string, any> = {
-									id: subitem.id,
-									column_values: {},
-								};
-
-								for (const col of subitem.column_values || []) {
-									const subCol: Record<string, any> = {
-										type: col.type,
-										value: await parseValue(col.value),
-										text: col.text,
+							formatted.subitems = await Promise.all(
+								item.subitems.map(async (subitem: any) => {
+									const subFormatted: Record<string, any> = {
+										id: subitem.id,
+										name: subitem.name,
+										column_values: {},
 									};
 
-									if ('display_value' in col) {
-										subCol.display_value = col.display_value;
+									for (const col of subitem.column_values || []) {
+										const subCol: Record<string, any> = {
+											type: col.type,
+											value: await parseValue(col.value),
+											text: col.text,
+										};
+
+										if ('display_value' in col) {
+											subCol.display_value = col.display_value;
+										}
+
+										if ('linked_item_ids' in col) {
+											subCol.linked_item_ids = col.linked_item_ids;
+										}
+
+										if ('mirrored_items' in col) {
+											subCol.mirrored_items = col.mirrored_items;
+										}
+
+										subFormatted.column_values[col.id] = subCol;
 									}
 
-									if ('linked_item_ids' in col) {
-										subCol.linked_item_ids = col.linked_item_ids;
-									}
-
-									if ('mirrored_items' in col) {
-										subCol.mirrored_items = col.mirrored_items;
-									}
-
-									subFormatted.column_values[col.id] = subCol;
-								}
-
-								return subFormatted;
-							});
+									return subFormatted;
+								}),
+							);
 						}
 
 						if (item.parent_item && typeof item.parent_item === 'object') {
@@ -3404,6 +4030,11 @@ export class Worktables implements INodeType {
 								linkText?: string;
 								url?: string;
 								emailValue?: string;
+								countryCode?: string;
+								phoneValue?: string;
+								buttonValue?: boolean;
+								objectValue?: string;
+								fileLinks?: { file: { linkToFile: string; name: string }[] };
 							}[];
 						};
 
@@ -3419,9 +4050,46 @@ export class Worktables implements INodeType {
 
 								console.log('Column ID:', columnId);
 								console.log('Detected Type:', columnType);
+								if (columnType === 'objectValue') {
+									console.log('Processing objectValue for column:', columnId);
+									console.log('Object Value:', col.objectValue);
+									try {
+										const parsedValue = JSON.parse(col.objectValue || '{}');
+										column_values_object[columnId] = parsedValue;
+										console.log('Parsed Object Value:', column_values_object[columnId]);
+									} catch (error) {
+										throw new NodeApiError(this.getNode(), {
+											message: `Invalid JSON format for column ${columnId}: ${error.message}`,
+										});
+									}
+									continue;
+								}
+								if (
+									!columnType ||
+									columnType === 'text' ||
+									columnType === 'simple' ||
+									col.columnType === 'simple' ||
+									columnType === 'file'
+								) {
+									if (col.columnValue !== undefined) {
+										const value = col.columnValue;
+										if (typeof value === 'string' && columnType === 'file') {
+											const links = value.split(',').map((item) => {
+												const [link, ...nameParts] = item.trim().split(/\s+/);
+												return {
+													fileType: 'LINK',
+													linkToFile: link,
+													name: nameParts.join(' '),
+												};
+											});
 
-								if (columnType === 'simple' || !columnType) {
-									column_values_object[columnId] = columnValue;
+											column_values_object[columnId] = { files: links };
+										} else if (typeof value === 'string') {
+											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+										} else {
+											column_values_object[columnId] = value;
+										}
+									}
 									continue;
 								}
 
@@ -3464,13 +4132,13 @@ export class Worktables implements INodeType {
 											};
 										}
 										break;
-
 									case 'dependency':
 										column_values_object[columnId] = {
 											item_ids: columnValue.split(',').map((id) => id.trim()),
 										};
 										break;
 									case 'people':
+										console.log('Processing people column:', col);
 										const personsAndTeams: any[] = [];
 
 										if (Array.isArray(col.peopleValue)) {
@@ -3553,66 +4221,92 @@ export class Worktables implements INodeType {
 											url: col.url || '',
 										};
 										break;
-
-									/* case 'file': {
-										const binaryPropertyName = col.fileUpload;
-
-										if (!binaryPropertyName) return [];
-
-										const binaryData = this.helpers.assertBinaryData(0, binaryPropertyName);
-										const fileBuffer = Buffer.from(binaryData.data, 'base64');
-										const fileName =
-											`${binaryData.fileName}.${binaryData.fileExtension}` || 'upload.dat'; // Name the file if not provided
-										console.log('Binary Data:', binaryData);
-										console.log('fileName:', fileName);
-										console.log('fileBuffer:', fileBuffer);
-										const form = new FormData();
-										form.append(
-											'query',
-											`mutation ($file: File!) {
-											add_file_to_column (file: $file, item_id: ${itemId}, column_id: "${columnId}") {
-												id
-											}
-										}`,
-										);
-
-										form.append('variables[file]', fileBuffer, {
-											filename: fileName,
-											contentType: binaryData.mimeType || 'application/octet-stream',
-										});
-
-										const uploadResponse = await axios.post(
-											'https://api.monday.com/v2/file',
-											form,
-											{
-												headers: {
-													Authorization: headers.Authorization,
-													...form.getHeaders(),
-												},
-												maxContentLength: Infinity,
-												maxBodyLength: Infinity,
-											},
-										);
-
-										console.log('Upload response:', uploadResponse);
+									case 'phone':
+										column_values_object[columnId] = {
+											phone: `${col.countryCode?.split(' ')[0]}${col.phoneValue || ''}`.replace(
+												/[^\d+]/g,
+												'',
+											),
+											countryShortName: col.countryCode?.split(' ')[1] || '',
+										};
 										break;
-									} */
+									case 'fileLink':
+										if (col.fileLinks && col.fileLinks.file) {
+											const links = col.fileLinks.file.map((file: any) => ({
+												fileType: 'LINK',
+												linkToFile: file.linkToFile,
+												name: file.name,
+											}));
+											column_values_object[columnId] = { files: links };
+										}
+										break;
+									case 'button':
+										const query = `query {
+												items (ids: ${itemId}) {
+													column_values (ids: "${columnId}") {
+													... on ButtonValue {
+														color
+														label
+														value
+													}
+													}
+												}
+												}`;
 
+										const buttonResponse = await this.helpers.request({
+											method: 'POST',
+											url: 'https://api.monday.com/v2',
+											headers,
+											body: { query },
+										});
+										try {
+											const buttonValue =
+												JSON.parse(buttonResponse).data.items[0].column_values[0].value;
+											const clicks = JSON.parse(buttonValue)?.clicks || 0;
+											column_values_object[columnId] = {
+												clicks: clicks + 1,
+												changed_at: new Date().toISOString(),
+											};
+										} catch (error) {
+											continue;
+										}
+
+										break;
+
+									case 'fileLink':
+										if (col.fileLinks && col.fileLinks.file) {
+											const links = col.fileLinks.file.map((file: any) => ({
+												fileType: 'LINK',
+												linkToFile: file.linkToFile,
+												name: file.name,
+											}));
+											column_values_object[columnId] = { files: links };
+										}
+										break;
 									default:
 										column_values_object[columnId] = columnValue;
 										break;
 								}
 							}
 						}
-
+						console.log(
+							'column_values_object FINAL:',
+							JSON.stringify(column_values_object, null, 2),
+						);
 						const mutation = `mutation {
 							change_multiple_column_values(
 								create_labels_if_missing: true,
 								board_id: ${boardId},
 								item_id: "${itemId}",
-								column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"')}"
+								column_values: "${JSON.stringify(column_values_object)
+									.replace(/"/g, '\\"')
+									.replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
 							) {
 								id
+								url
+								board {
+									id
+								}
 							}
 						}`;
 
@@ -3637,6 +4331,7 @@ export class Worktables implements INodeType {
 							column: Array<{
 								columnId: string;
 								columnType?: string;
+								objectValue?: string;
 								columnValue?: string;
 								checkboxValue?: boolean;
 								statusLabel?: string;
@@ -3654,6 +4349,9 @@ export class Worktables implements INodeType {
 								linkText?: string;
 								url?: string;
 								emailValue?: string;
+								countryCode?: string;
+								phoneValue?: string;
+								fileLinks?: { file: { linkToFile: string; name: string }[] };
 							}>;
 						};
 
@@ -3693,12 +4391,40 @@ export class Worktables implements INodeType {
 								const type = columnDef?.type;
 
 								if (!type || type === 'text' || type === 'simple' || col.columnType === 'simple') {
+									console.log('Processing text/simple column:', col);
 									if (col.columnValue !== undefined) {
-										column_values_object[columnId] = col.columnValue;
+										const value = col.columnValue;
+										if (typeof value === 'string' && type === 'file') {
+											const links = value.split(',').map((item) => {
+												const [link, ...nameParts] = item.trim().split(/\s+/);
+												return {
+													fileType: 'LINK',
+													linkToFile: link,
+													name: nameParts.join(' '),
+												};
+											});
+
+											column_values_object[columnId] = { files: links };
+										} else if (typeof value === 'string') {
+											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+										} else {
+											column_values_object[columnId] = value;
+										}
+									}
+									continue;
+								} else if (col.columnType === 'objectValue') {
+									console.log('Processing objectValue for column:', columnId);
+									try {
+										const parsedValue = JSON.parse(col.objectValue || '{}');
+										column_values_object[columnId] = parsedValue;
+									} catch (error) {
+										throw new NodeApiError(this.getNode(), {
+											message: `Invalid JSON format for column ${columnId}: ${error.message}`,
+										});
 									}
 									continue;
 								}
-
+								console.log('Processing column:', type);
 								switch (type) {
 									case 'board_relation':
 									case 'connect_boards':
@@ -3710,7 +4436,6 @@ export class Worktables implements INodeType {
 											column_values_object[columnId] = { item_ids: incomingIds };
 										}
 										break;
-
 									case 'dependency':
 										{
 											const rawValue = (col.columnValue as any) || '';
@@ -3789,7 +4514,26 @@ export class Worktables implements INodeType {
 											};
 										}
 										break;
-
+									case 'phone':
+										column_values_object[columnId] = {
+											phone: `${col.countryCode?.split(' ')[0]}${col.phoneValue || ''}`.replace(
+												/[^\d+]/g,
+												'',
+											),
+											countryShortName: col.countryCode?.split(' ')[1] || '',
+										};
+										break;
+									case 'file':
+										console.log('Processing fileLink column:', col);
+										if (col.fileLinks && col.fileLinks.file) {
+											const links = col.fileLinks.file.map((file: any) => ({
+												fileType: 'LINK',
+												linkToFile: file.linkToFile,
+												name: file.name,
+											}));
+											column_values_object[columnId] = { files: links };
+										}
+										break;
 									case 'dropdown':
 										{
 											const labels = col.dropdownValue
@@ -3861,7 +4605,9 @@ export class Worktables implements INodeType {
 							parentId = this.getNodeParameter('parentId', 0) as string;
 						}
 
-						const columnValuesString = JSON.stringify(column_values_object).replace(/"/g, '\\"');
+						const columnValuesString = JSON.stringify(column_values_object)
+							.replace(/"/g, '\\"')
+							.replace(/(^|[^\\])\\n/g, '$1\\\\n');
 
 						let groupLine = groupId ? `group_id: "${groupId}",` : '';
 
@@ -3872,10 +4618,14 @@ export class Worktables implements INodeType {
 									parent_item_id: ${parentId},
 									item_name: "${itemName}",
 									column_values: "${columnValuesString}"
-								) { id name column_values {
+								) { id name url
+									board {
+										id
+									} column_values {
 									id
 									text
 									type
+									
 									value
 									}}
 							}`
@@ -3886,16 +4636,19 @@ export class Worktables implements INodeType {
 									item_name: "${itemName}",
 									${groupLine}
 									column_values: "${columnValuesString}"
-								) { id name column_values {
+								) { id name url
+									board {
+										id
+									} column_values {
 									id
 									text
 									type
 									value
+									
 									}}
 							}`;
 
 						console.log('Mutation:', mutation);
-						console.log('ParentID:', parentId);
 
 						const responseRaw = await this.helpers.request({
 							method: 'POST',
@@ -3907,6 +4660,18 @@ export class Worktables implements INodeType {
 							body: { query: mutation },
 						});
 
+						response = await parseApiResponse(responseRaw);
+
+						if (!response.success) {
+							const parsed = JSON.parse(response.data);
+							const firstError = parsed.errors || { message: 'Unknown error' };
+							console.log(firstError[0]);
+							throw new NodeApiError(this.getNode(), firstError, {
+								message: firstError.message,
+								description: JSON.stringify(firstError, null, 2),
+							});
+						}
+
 						const parsedResponse = JSON.parse(responseRaw);
 
 						const itemData =
@@ -3915,6 +4680,8 @@ export class Worktables implements INodeType {
 						const formattedResponse: Record<string, any> = {
 							id: itemData.id,
 							name: itemName,
+							url: itemData.url,
+							board: itemData.board.id,
 							column_values: {},
 						};
 
@@ -3966,6 +4733,292 @@ export class Worktables implements INodeType {
 						}); */
 						break;
 					}
+
+					case 'createOrUpdateItem': {
+						const itemName = this.getNodeParameter('itemName', 0) as string;
+						const boardId = this.getNodeParameter('boardId', 0) as string;
+						const isSubitem = this.getNodeParameter('isSubitem', 0) as boolean;
+						const itemIdOptional = this.getNodeParameter('itemIdOptional', 0, false) as string;
+
+						const raw = this.getNodeParameter('columnValues', 0) as {
+							column: Array<{
+								columnId: string;
+								columnType?: string;
+								objectValue?: string;
+								columnValue?: string;
+								checkboxValue?: boolean;
+								statusLabel?: string;
+								latitude?: string;
+								longitude?: string;
+								address?: string;
+								dropdownValue?: string;
+								peopleValue?: string[] | string;
+								teamsValue?: string[] | string;
+								startDate?: string;
+								endDate?: string;
+								addConnections?: boolean;
+								dateValue?: string;
+								emailText?: string;
+								linkText?: string;
+								url?: string;
+								emailValue?: string;
+								countryCode?: string;
+								phoneValue?: string;
+								fileLinks?: { file: { linkToFile: string; name: string }[] };
+							}>;
+						};
+
+						const columnValues = raw.column;
+						let column_values_object: Record<string, any> = {};
+
+						console.log('Column Values:', JSON.stringify(raw, null, 2));
+
+						if (columnValues?.length > 0) {
+							const columnTypeResponse = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers: {
+									Authorization: `Bearer ${apiKey}`,
+									'Content-Type': 'application/json',
+								},
+								body: {
+									query: `query {
+									boards(ids: ${boardId}) {
+										columns {
+										id
+										type
+										}
+									}
+									}`,
+								},
+							});
+
+							const columnsType = JSON.parse(columnTypeResponse).data.boards[0].columns as Array<{
+								id: string;
+								type: string;
+							}>;
+
+							for (const col of columnValues) {
+								const columnId = col.columnId;
+								const columnDef = columnsType.find((c) => c.id === columnId);
+								const type = columnDef?.type;
+
+								if (!type || type === 'text' || type === 'simple' || col.columnType === 'simple') {
+									console.log('Processing text/simple column:', col);
+									if (col.columnValue !== undefined) {
+										const value = col.columnValue;
+										if (typeof value === 'string' && type === 'file') {
+											const links = value.split(',').map((item) => {
+												const [link, ...nameParts] = item.trim().split(/\s+/);
+												return {
+													fileType: 'LINK',
+													linkToFile: link,
+													name: nameParts.join(' '),
+												};
+											});
+
+											column_values_object[columnId] = { files: links };
+										} else if (typeof value === 'string') {
+											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+										} else {
+											column_values_object[columnId] = value;
+										}
+									}
+									continue;
+								} else if (col.columnType === 'objectValue') {
+									console.log('Processing objectValue for column:', columnId);
+									try {
+										const parsedValue = JSON.parse(col.objectValue || '{}');
+										column_values_object[columnId] = parsedValue;
+									} catch (error) {
+										throw new NodeApiError(this.getNode(), {
+											message: `Invalid JSON format for column ${columnId}: ${error.message}`,
+										});
+									}
+									continue;
+								}
+
+								// Process other column types (same logic as createItem)
+								switch (type) {
+									case 'checkbox':
+										column_values_object[columnId] = col.checkboxValue ? { checked: 'true' } : { checked: 'false' };
+										break;
+									case 'status':
+										column_values_object[columnId] = { label: col.statusLabel || 'Working on it' };
+										break;
+									case 'location':
+										column_values_object[columnId] = {
+											lat: col.latitude || '0',
+											lng: col.longitude || '0',
+											address: col.address || '',
+										};
+										break;
+									case 'dropdown':
+										column_values_object[columnId] = { label: col.dropdownValue || '' };
+										break;
+									case 'people':
+										if (col.peopleValue) {
+											const peopleIds = Array.isArray(col.peopleValue) ? col.peopleValue : [col.peopleValue];
+											column_values_object[columnId] = { personsAndTeams: peopleIds.map(id => ({ id, kind: 'person' })) };
+										}
+										break;
+									case 'team':
+										if (col.teamsValue) {
+											const teamIds = Array.isArray(col.teamsValue) ? col.teamsValue : [col.teamsValue];
+											column_values_object[columnId] = { personsAndTeams: teamIds.map(id => ({ id, kind: 'team' })) };
+										}
+										break;
+									case 'timeline':
+										column_values_object[columnId] = {
+											from: col.startDate || '',
+											to: col.endDate || '',
+										};
+										break;
+									case 'date':
+										column_values_object[columnId] = { date: col.dateValue || '' };
+										break;
+									case 'email':
+										column_values_object[columnId] = {
+											email: col.emailValue || '',
+											text: col.emailText || '',
+										};
+										break;
+									case 'link':
+										column_values_object[columnId] = {
+											url: col.url || '',
+											text: col.linkText || '',
+										};
+										break;
+									case 'phone':
+										column_values_object[columnId] = {
+											phone: col.phoneValue || '',
+											countryShortName: col.countryCode || 'US',
+										};
+										break;
+									case 'file':
+										if (col.fileLinks?.file) {
+											column_values_object[columnId] = { files: col.fileLinks.file };
+										}
+										break;
+									default:
+										if (col.columnValue !== undefined) {
+											column_values_object[columnId] = col.columnValue;
+										}
+								}
+							}
+						}
+
+						let mutation: string;
+						let formatted: any;
+
+						// Determine if we should create or update
+						if (itemIdOptional && itemIdOptional.trim() !== '') {
+							// UPDATE existing item
+							console.log('Updating existing item:', itemIdOptional);
+							
+							mutation = `mutation {
+								change_multiple_column_values(
+									create_labels_if_missing: true,
+									board_id: ${boardId},
+									item_id: "${itemIdOptional}",
+									column_values: "${JSON.stringify(column_values_object)
+										.replace(/"/g, '\\"')
+										.replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+								) {
+									id
+									url
+									board {
+										id
+									}
+								}
+							}`;
+
+							console.log('Generated Update Mutation:', mutation);
+
+							response = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query: mutation },
+							});
+
+							const responseData = JSON.parse(response);
+							const itemData = responseData.data.change_multiple_column_values;
+
+							formatted = {
+								id: itemData.id,
+								url: itemData.url,
+								operation: 'update',
+								board_id: itemData.board.id,
+								column_values: column_values_object,
+							};
+						} else {
+							// CREATE new item
+							console.log('Creating new item:', itemName);
+							
+							const parentId = this.getNodeParameter('parentId', 0, false) as string;
+							
+							if (isSubitem && parentId) {
+								mutation = `mutation {
+									create_subitem(
+										parent_item_id: ${parentId},
+										item_name: "${itemName}",
+										column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"').replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+									) {
+										id
+										name
+										url
+										board {
+											id
+										}
+									}
+								}`;
+							} else {
+								mutation = `mutation {
+									create_item(
+										board_id: ${boardId},
+										item_name: "${itemName}",
+										column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"').replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+									) {
+										id
+										name
+										url
+										board {
+											id
+										}
+									}
+								}`;
+							}
+
+							response = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query: mutation },
+							});
+
+							const responseData = JSON.parse(response);
+							const itemData = isSubitem && parentId 
+								? responseData.data.create_subitem 
+								: responseData.data.create_item;
+
+							formatted = {
+								id: itemData.id,
+								name: itemData.name,
+								url: itemData.url,
+								operation: 'create',
+								board_id: itemData.board.id,
+								column_values: column_values_object,
+							};
+
+							if (isSubitem && parentId) {
+								formatted.parent_item = { id: parentId };
+							}
+						}
+
+						return [[{ json: formatted }]];
+					}
+
 					case 'deleteItem': {
 						console.log('Delete an item');
 
@@ -4181,6 +5234,8 @@ export class Worktables implements INodeType {
 										group {
 											id
 											title
+											color
+											position
 										}
 										state
 										created_at
@@ -4245,6 +5300,443 @@ export class Worktables implements INodeType {
 						response = JSON.stringify(formattedItems);
 						break;
 					}
+					case 'searchItemsAdvanced': {
+						const boardId = this.getNodeParameter('boardId', 0) as string;
+						const limit = this.getNodeParameter('limit', 0, 25) as number;
+						const cursor = this.getNodeParameter('cursor', 0, '') as string;
+						const searchTerm = this.getNodeParameter('searchTerm', 0, '') as string;
+						const fetchColumnValues = this.getNodeParameter(
+							'fetchColumnValuesAdvanced',
+							0,
+							true,
+						) as boolean;
+
+						const advancedFilterRules = this.getNodeParameter('advancedFilterRules', 0) as {
+							rule: {
+								columnId: string;
+								compareAttribute?: string;
+								compareValue: string;
+								operator: string;
+							}[];
+						};
+
+						const advancedSortOptions = this.getNodeParameter('advancedSortOptions', 0, { sortBy: [] }) as {
+							sortBy: {
+								columnId: string;
+								direction: string;
+							}[];
+						};
+
+						const logicalOperator = this.getNodeParameter('logicalOperatorAdvanced', 0) as string;
+
+						// Build advanced filters with enhanced date and numeric support
+						let rulesArray = [] as string[];
+						if (advancedFilterRules?.rule?.length > 0) {
+							console.log('Processing filter rules:', advancedFilterRules.rule);
+							rulesArray = advancedFilterRules.rule.map((rule) => {
+								let formattedValue;
+
+								// Enhanced handling for different operators
+								if (['is_empty', 'is_not_empty'].includes(rule.operator)) {
+									formattedValue = '""';
+								} else if (rule.operator === 'between') {
+									// Handle between operator - check if it's date values
+									const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+									
+									try {
+										const rangeValues = JSON.parse(rule.compareValue);
+										// Check if it's an array of dates
+										if (Array.isArray(rangeValues) && rangeValues.length === 2) {
+											const [startDate, endDate] = rangeValues;
+											if (dateRegex.test(startDate) && dateRegex.test(endDate)) {
+												// Convert both dates and format with EXACT
+												const [startMonth, startDay, startYear] = startDate.split('/');
+												const [endMonth, endDay, endYear] = endDate.split('/');
+												const formattedStartDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
+												const formattedEndDate = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
+												formattedValue = JSON.stringify(["EXACT", formattedStartDate, "EXACT", formattedEndDate]);
+											} else {
+												formattedValue = JSON.stringify(rangeValues);
+											}
+										} else {
+											formattedValue = JSON.stringify(rangeValues);
+										}
+									} catch (e) {
+										const values = rule.compareValue.split(',').map((v) => v.trim());
+										if (values.length === 2 && dateRegex.test(values[0]) && dateRegex.test(values[1])) {
+											// Convert both dates and format with EXACT
+											const [startMonth, startDay, startYear] = values[0].split('/');
+											const [endMonth, endDay, endYear] = values[1].split('/');
+											const formattedStartDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
+											const formattedEndDate = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
+											formattedValue = JSON.stringify(["EXACT", formattedStartDate, "EXACT", formattedEndDate]);
+										} else {
+											formattedValue = JSON.stringify(values);
+										}
+									}
+								} else if (['within_the_next', 'within_the_last'].includes(rule.operator)) {
+									// Enhanced date range handling
+									try {
+										const dateRange = JSON.parse(rule.compareValue);
+										formattedValue = JSON.stringify(dateRange);
+									} catch (e) {
+										// Handle simple numeric values for days
+										formattedValue = JSON.stringify({ days: parseInt(rule.compareValue) || 7 });
+									}
+								} else if (['greater_than', 'greater_than_or_equals', 'lower_than', 'lower_than_or_equal'].includes(rule.operator)) {
+									// Enhanced numeric and date comparison
+									const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+									const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+									
+									if (dateRegex.test(rule.compareValue) || isoDateRegex.test(rule.compareValue)) {
+										// Handle date comparisons - convert to proper format
+										let formattedDate;
+										if (dateRegex.test(rule.compareValue)) {
+											// Convert MM/DD/YYYY to YYYY-MM-DD format
+											const [month, day, year] = rule.compareValue.split('/');
+											formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+										} else {
+											// Already in correct format
+											formattedDate = rule.compareValue;
+										}
+										
+										// For date comparisons, use the date directly (not with EXACT)
+										formattedValue = formattedDate;
+									} else {
+										// Handle numeric comparisons
+										formattedValue = rule.compareValue;
+									}
+								} else if (rule.operator === 'equals') {
+									// Handle equals operator - for date columns, convert to appropriate format
+									const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+									const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+									
+									// Check if it's multiple dates (comma separated or JSON array)
+									const isMultipleDates = rule.compareValue.includes(',') || 
+										(rule.compareValue.startsWith('[') && rule.compareValue.endsWith(']'));
+									
+									if (isMultipleDates) {
+										// Handle multiple dates - format for between operator
+										try {
+											const rangeValues = JSON.parse(rule.compareValue);
+											if (Array.isArray(rangeValues) && rangeValues.length === 2) {
+												const [startDate, endDate] = rangeValues;
+												if (dateRegex.test(startDate) && dateRegex.test(endDate)) {
+													// Convert both dates and format with EXACT
+													const [startMonth, startDay, startYear] = startDate.split('/');
+													const [endMonth, endDay, endYear] = endDate.split('/');
+													const formattedStartDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
+													const formattedEndDate = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
+													formattedValue = JSON.stringify(["EXACT", formattedStartDate, "EXACT", formattedEndDate]);
+												} else {
+													formattedValue = JSON.stringify(rangeValues);
+												}
+											} else {
+												formattedValue = JSON.stringify(rangeValues);
+											}
+										} catch (e) {
+											const values = rule.compareValue.split(',').map((v) => v.trim());
+											if (values.length === 2 && dateRegex.test(values[0]) && dateRegex.test(values[1])) {
+												// Convert both dates and format with EXACT
+												const [startMonth, startDay, startYear] = values[0].split('/');
+												const [endMonth, endDay, endYear] = values[1].split('/');
+												const formattedStartDate = `${startYear}-${startMonth.padStart(2, '0')}-${startDay.padStart(2, '0')}`;
+												const formattedEndDate = `${endYear}-${endMonth.padStart(2, '0')}-${endDay.padStart(2, '0')}`;
+												formattedValue = JSON.stringify(["EXACT", formattedStartDate, "EXACT", formattedEndDate]);
+											} else if (values.length === 2 && isoDateRegex.test(values[0]) && isoDateRegex.test(values[1])) {
+												// Handle ISO format dates
+												formattedValue = JSON.stringify(["EXACT", values[0], "EXACT", values[1]]);
+											} else {
+												formattedValue = JSON.stringify(values);
+											}
+										}
+									} else if (dateRegex.test(rule.compareValue)) {
+										// Single date - convert MM/DD/YYYY to YYYY-MM-DD format for Monday.com
+										const [month, day, year] = rule.compareValue.split('/');
+										const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+										// For date columns, use EXACT format as per Monday.com docs
+										formattedValue = JSON.stringify(["EXACT", formattedDate]);
+									} else if (isoDateRegex.test(rule.compareValue)) {
+										// Already in correct format, add EXACT
+										formattedValue = JSON.stringify(["EXACT", rule.compareValue]);
+									} else {
+										formattedValue = rule.compareValue;
+									}
+								} else if (rule.operator === 'any_of' || rule.operator === 'not_any_of') {
+									// Special handling for date columns with any_of/not_any_of
+									// Try to detect if it's a date value and format it properly
+									const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+									const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+									
+									// Check if it's multiple dates (comma separated)
+									const isMultipleDates = rule.compareValue.includes(',');
+									
+									if (isMultipleDates) {
+										// Handle multiple dates - format each with EXACT
+										const values = rule.compareValue.split(',').map((v) => v.trim());
+										const formattedDates = values.map(date => {
+											if (dateRegex.test(date)) {
+												// Convert MM/DD/YYYY to YYYY-MM-DD format
+												const [month, day, year] = date.split('/');
+												return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+											} else if (isoDateRegex.test(date)) {
+												// Already in correct format
+												return date;
+											}
+											return date;
+										});
+										
+										// Format as array with EXACT for each date
+										const exactDates = formattedDates.flatMap(date => ["EXACT", date]);
+										formattedValue = JSON.stringify(exactDates);
+									} else if (dateRegex.test(rule.compareValue)) {
+										// Single date - convert MM/DD/YYYY to YYYY-MM-DD format for Monday.com
+										const [month, day, year] = rule.compareValue.split('/');
+										const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+										// For date columns, use EXACT format as per Monday.com docs
+										formattedValue = JSON.stringify(["EXACT", formattedDate]);
+									} else if (isoDateRegex.test(rule.compareValue)) {
+										// Already in correct format, add EXACT
+										formattedValue = JSON.stringify(["EXACT", rule.compareValue]);
+									} else {
+										// Handle other values
+										try {
+											const multiValues = JSON.parse(rule.compareValue);
+											formattedValue = Array.isArray(multiValues)
+												? JSON.stringify(multiValues)
+												: JSON.stringify([rule.compareValue]);
+										} catch (e) {
+											const values = rule.compareValue.split(',').map((v) => v.trim());
+											formattedValue = JSON.stringify(values);
+										}
+									}
+								} else {
+									// Handle other operators - check if it's a date value
+									const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+									const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+									
+									if (dateRegex.test(rule.compareValue)) {
+										// Convert MM/DD/YYYY to YYYY-MM-DD format for Monday.com
+										const [month, day, year] = rule.compareValue.split('/');
+										const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+										// For date columns, use EXACT format as per Monday.com docs
+										formattedValue = JSON.stringify(["EXACT", formattedDate]);
+									} else if (isoDateRegex.test(rule.compareValue)) {
+										// Already in correct format, add EXACT
+										formattedValue = JSON.stringify(["EXACT", rule.compareValue]);
+									} else {
+										formattedValue = rule.compareValue;
+									}
+								}
+
+								// For date columns with equals operator, determine the correct operator
+								let actualOperator = rule.operator;
+								const dateRegex = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+								const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+								
+								if (rule.operator === 'equals') {
+									// Check if it's multiple dates (comma separated or JSON array)
+									// But exclude the case where it's already formatted as ["EXACT", "date"]
+									const isAlreadyFormatted = rule.compareValue.startsWith('["EXACT"');
+									const isMultipleDates = !isAlreadyFormatted && (
+										rule.compareValue.includes(',') || 
+										(rule.compareValue.startsWith('[') && rule.compareValue.endsWith(']'))
+									);
+									
+									if (isMultipleDates) {
+										// Multiple dates - use between operator
+										actualOperator = 'between';
+									} else if (dateRegex.test(rule.compareValue) || isoDateRegex.test(rule.compareValue) || isAlreadyFormatted) {
+										// Single date - use any_of operator
+										actualOperator = 'any_of';
+									}
+								} else if (rule.operator === 'any_of') {
+									// For any_of operator, check if it's multiple dates
+									const isMultipleDates = rule.compareValue.includes(',') || 
+										(rule.compareValue.startsWith('[') && rule.compareValue.endsWith(']'));
+									
+									if (isMultipleDates) {
+										// Multiple dates with any_of - keep as any_of
+										actualOperator = 'any_of';
+									}
+								}
+								
+								const ruleString = `{
+									column_id: "${rule.columnId}",
+									${rule.compareAttribute ? `compare_attribute: "${rule.compareAttribute}",` : ''}
+									compare_value: ${formattedValue},
+									operator: ${actualOperator}
+								}`;
+								
+								console.log(`Rule for column ${rule.columnId}:`, {
+									originalOperator: rule.operator,
+									actualOperator: actualOperator,
+									compareValue: rule.compareValue,
+									formattedValue: formattedValue,
+									ruleString: ruleString
+								});
+								
+								return ruleString;
+							});
+						}
+
+						// Build advanced sort options
+						const orderByArray = [] as string[];
+						if (advancedSortOptions?.sortBy?.length > 0) {
+							advancedSortOptions.sortBy.forEach((sort) => {
+								orderByArray.push(`{
+									column_id: "${sort.columnId}",
+									direction: ${sort.direction}
+								}`);
+							});
+						}
+
+						// Build the advanced query with pagination and search
+						const query = `query {
+							boards(ids: [${boardId}]) {
+								items_page(limit: ${limit}, ${cursor ? `cursor: "${cursor}",` : ''} query_params: {
+									${logicalOperator ? `operator: ${logicalOperator},` : ''}
+									${rulesArray.length > 0 ? `rules: [${rulesArray.join(', ')}],` : ''}
+									${orderByArray.length > 0 ? `order_by: [${orderByArray.join(', ')}],` : ''}
+									${searchTerm ? `search_term: "${searchTerm}"` : ''}
+								}) {
+									items {
+										id
+										name
+										column_values {
+											id
+											text
+											value
+											type
+										}
+										group {
+											id
+											title
+											color
+											position
+										}
+										state
+										created_at
+										updated_at
+										subscribers {
+											id
+											name
+											email
+										}
+									}
+									cursor
+								}
+							}
+						}`;
+
+						console.log('Advanced Search Query: ', query);
+						console.log('Filter Rules: ', rulesArray);
+						console.log('Search Term: ', searchTerm);
+						console.log('Board ID: ', boardId);
+						
+						// First, let's check if there are any items in the board at all
+						const testQuery = `query {
+							boards(ids: [${boardId}]) {
+								items_page(limit: 5) {
+									items {
+										id
+										name
+										column_values {
+											id
+											text
+											value
+											type
+										}
+									}
+								}
+							}
+						}`;
+						
+						console.log('Test Query (no filters): ', testQuery);
+						
+						const testResponse = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query: testQuery },
+						});
+						
+						const testParsed = JSON.parse(testResponse);
+						const testItems = testParsed?.data?.boards?.[0]?.items_page?.items || [];
+						console.log('Test - Items in board (no filters):', testItems.length);
+						if (testItems.length > 0) {
+							console.log('Sample item column values:', testItems[0].column_values);
+						}
+
+						const rawResponse = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query },
+						});
+						
+						const parsed = JSON.parse(rawResponse);
+						const itemsPage = parsed?.data?.boards?.[0]?.items_page;
+						const items = itemsPage?.items || [];
+						const nextCursor = itemsPage?.cursor;
+						const hasMore = nextCursor ? true : false;
+						
+						console.log('Raw API Response:', JSON.stringify(parsed, null, 2));
+						console.log('Items found:', items.length);
+
+						const formattedItems = await Promise.all(
+							items.map(async (item: any) => {
+								const formatted: Record<string, any> = {
+									id: item.id,
+									name: item.name,
+									group: item.group,
+									state: item.state,
+									created_at: item.created_at,
+									updated_at: item.updated_at,
+									subscribers: item.subscribers,
+									column_values: !fetchColumnValues ? undefined : {},
+									// Add pagination info to each item for reference
+									_pagination: {
+										nextCursor,
+										hasMore,
+									},
+								};
+
+								if (!fetchColumnValues) return formatted;
+
+								for (const col of item.column_values || []) {
+									if (col.type === 'subtasks') continue;
+
+									const formattedCol: Record<string, any> = {
+										type: col.type,
+										value: await parseValue(col.value),
+										text: col.text,
+									};
+
+									if ('display_value' in col) {
+										formattedCol.display_value = col.display_value;
+									}
+
+									formatted.column_values[col.id] = formattedCol;
+								}
+
+								return formatted;
+							}),
+						);
+
+						// Return items with pagination metadata
+						const result = {
+							items: formattedItems,
+							pagination: {
+								nextCursor,
+								hasMore,
+								totalReturned: formattedItems.length,
+							},
+						};
+
+						response = JSON.stringify(result);
+						break;
+					}
 					case 'uploadItemFile': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const columnId = this.getNodeParameter('fileColumnId', 0) as string;
@@ -4271,9 +5763,13 @@ export class Worktables implements INodeType {
 							}
 
 							const fileBuffer = Buffer.from(binaryData.data, 'base64');
-							const fileName = `${binaryData.fileName || 'upload'}.${
-								binaryData.fileExtension || 'dat'
-							}`;
+							let fileName = binaryData.fileName || 'upload';
+							// Only add extension if fileName doesn't already have one
+							if (!fileName.includes('.') && binaryData.fileExtension) {
+								fileName = `${fileName}.${binaryData.fileExtension}`;
+							} else if (!fileName.includes('.')) {
+								fileName = `${fileName}.dat`;
+							}
 
 							console.log('Binary Data:', binaryData);
 							console.log('fileName:', fileName);
@@ -4307,6 +5803,104 @@ export class Worktables implements INodeType {
 						}
 
 						break;
+					}
+					case 'listGroupItems': {
+						const boardId = this.getNodeParameter('boardId', 0) as string;
+						const groupId = this.getNodeParameter('groupId', 0) as string;
+
+						if (!boardId || !groupId) {
+							throw new NodeApiError(this.getNode(), {
+								message: 'Board ID and Group ID are required.',
+							});
+						}
+
+						const query = `
+						query {
+							boards (ids: [${boardId}]) {
+								groups (ids: "${groupId}") {
+									items_page {
+										items {
+											id
+											name
+											column_values {
+												id
+												text
+												value
+												type
+												... on BoardRelationValue {
+													display_value
+													linked_item_ids
+												}
+												... on MirrorValue {
+													display_value
+													mirrored_items {
+														linked_board_id
+													}
+												}
+											}
+											group {
+												id
+												title
+											}
+											state
+											created_at
+											updated_at
+										}
+									}
+								}
+							}
+						}
+	`;
+
+						const rawResponse = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query },
+						});
+						const parsed = JSON.parse(rawResponse);
+						const items = parsed?.data?.boards?.[0]?.groups?.[0]?.items_page?.items || [];
+
+						const formattedItems = await Promise.all(
+							items.map(async (item: any) => {
+								const formatted: Record<string, any> = {
+									id: item.id,
+									name: item.name,
+									group: item.group,
+									state: item.state,
+									created_at: item.created_at,
+									updated_at: item.updated_at,
+									column_values: {},
+								};
+
+								for (const col of item.column_values || []) {
+									if (col.type === 'subtasks') continue;
+
+									const formattedCol: Record<string, any> = {
+										type: col.type,
+										value: await parseValue(col.value),
+										text: col.text,
+									};
+
+									if ('display_value' in col) {
+										formattedCol.display_value = col.display_value;
+									}
+									if ('linked_item_ids' in col) {
+										formattedCol.linked_item_ids = col.linked_item_ids;
+									}
+									if ('mirrored_items' in col) {
+										formattedCol.mirrored_items = col.mirrored_items;
+									}
+
+									formatted.column_values[col.id] = formattedCol;
+								}
+
+								return formatted;
+							}),
+						);
+
+						// Return each item as a separate output item
+						return [formattedItems.map((item: Record<string, any>) => ({ json: item as IDataObject }))];
 					}
 
 					default:
@@ -4359,34 +5953,89 @@ export class Worktables implements INodeType {
 							headers,
 							body: { query },
 						});
-						break;
+
+						response = await parseApiResponse(response);
+
+						if (response.success) {
+							const parsed = JSON.parse(response.data);
+							const updates = parsed?.data?.items?.[0]?.updates || [];
+							return [updates.map((update: unknown) => ({ json: update }))];
+						} else {
+							const parsed = JSON.parse(response.data);
+							const firstError = parsed.errors || { message: 'Unknown error' };
+							throw new NodeApiError(this.getNode(), firstError, {
+								message: firstError.message,
+								description: JSON.stringify(firstError, null, 2),
+							});
+						}
 					}
 					case 'createUpdate': {
 						const items = this.getInputData();
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const body = this.getNodeParameter('bodyContent', 0) as string;
 						const isReply = this.getNodeParameter('isReply', 0) as boolean;
+						const shouldMention = this.getNodeParameter('mention', 0, false) as boolean;
+						const mentionsCollection = this.getNodeParameter('mentionsList', 0, []) as {
+							mention: Array<{
+								id: string;
+								type: 'User' | 'Team' | 'Board';
+							}>;
+						};
 
 						let parentUpdateId = '';
 						if (isReply) {
 							parentUpdateId = this.getNodeParameter('updateId', 0) as string;
 						}
 
-						const mutation = `
-							mutation {
-								create_update (item_id: ${itemId}, body: "${body}"${
-							isReply ? `, parent_id: ${parentUpdateId}` : ''
-						}) {
+						console.log('Mentions Collection:', JSON.stringify(mentionsCollection, null, 2));
+						console.log('Should Mention:', shouldMention);
+
+						let mentionsGraphQL = '';
+						if (shouldMention && mentionsCollection.mention.length > 0) {
+							const mentions = mentionsCollection.mention
+								.map((m) => `{id: ${m.id}, type: ${m.type}}`)
+								.join(', ');
+							mentionsGraphQL = `, mentions_list: [${mentions}]`;
+						}
+
+						// Use GraphQL variables to properly handle special characters, line breaks, and HTML
+						const mutation = isReply
+							? `
+							mutation ($body: String!, $itemId: ID!, $parentId: ID!) {
+								create_update (
+									item_id: $itemId,
+									body: $body,
+									parent_id: $parentId${mentionsGraphQL}
+								) {
 									id
 								}
-							}
-						`;
+							}`
+							: `
+							mutation ($body: String!, $itemId: ID!) {
+								create_update (
+									item_id: $itemId,
+									body: $body${mentionsGraphQL}
+								) {
+									id
+								}
+							}`;
 
+						const variables: { body: string; itemId: string; parentId?: string } = {
+							body,
+							itemId: itemId.toString(),
+						};
+
+						if (isReply) {
+							variables.parentId = parentUpdateId;
+						}
+
+						console.log('mutation:', mutation);
+						console.log('variables:', variables);
 						response = await this.helpers.request({
 							method: 'POST',
 							url: 'https://api.monday.com/v2',
 							headers,
-							body: { query: mutation },
+							body: { query: mutation, variables },
 						});
 
 						console.log('Create Update Result:', JSON.stringify(response, null, 2));
@@ -4394,7 +6043,7 @@ export class Worktables implements INodeType {
 						const updateId = JSON.parse(response).data?.create_update?.id;
 						if (!updateId) {
 							throw new NodeApiError(this.getNode(), {
-								message: 'Error creating update: No ID returned',
+								message: 'Error creating update: Update not created, no ID returned',
 							});
 						}
 
@@ -4456,20 +6105,46 @@ export class Worktables implements INodeType {
 						const items = this.getInputData();
 						const updateId = this.getNodeParameter('updateId', 0) as string;
 						const body = this.getNodeParameter('bodyContent', 0) as string;
+						const shouldMention = this.getNodeParameter('mention', 0, false) as boolean;
+						const mentionsCollection = this.getNodeParameter('mentionsList', 0, []) as {
+							mention: Array<{
+								id: string;
+								type: 'User' | 'Team' | 'Board';
+							}>;
+						};
 
+						console.log('Mentions Collection:', JSON.stringify(mentionsCollection, null, 2));
+						console.log('Should Mention:', shouldMention);
+
+						let mentionsGraphQL = '';
+						if (shouldMention && mentionsCollection.mention.length > 0) {
+							const mentions = mentionsCollection.mention
+								.map((m) => `{id: ${m.id}, type: ${m.type}}`)
+								.join(', ');
+							mentionsGraphQL = `, mentions_list: [${mentions}]`;
+						}
+
+						// Use GraphQL variables to properly handle special characters, line breaks, and HTML
 						const mutation = `
-							mutation {
-								edit_update (id: ${updateId}, body: "${body}") {
+							mutation ($body: String!, $updateId: ID!) {
+								edit_update (id: $updateId, body: $body${mentionsGraphQL}) {
 									id
 								}
 							}
 						`;
 
+						const variables = {
+							body,
+							updateId: updateId.toString(),
+						};
+
+						console.log('mutation:', mutation);
+						console.log('variables:', variables);
 						response = await this.helpers.request({
 							method: 'POST',
 							url: 'https://api.monday.com/v2',
 							headers,
-							body: { query: mutation },
+							body: { query: mutation, variables },
 						});
 
 						for (let i = 0; i < items.length; i++) {
@@ -4669,9 +6344,9 @@ export class Worktables implements INodeType {
 					}
 
 					case 'deleteTeam': {
-						const teamId = this.getNodeParameter('team', 0) as string;
+						const teamId = this.getNodeParameter('teamId', 0) as string;
 
-						const mutation = `mutation { delete_team(id: ${teamId}) { id } }`;
+						const mutation = `mutation { delete_team(team_id: ${teamId}) { id } }`;
 
 						response = await this.helpers.request({
 							method: 'POST',
@@ -4813,6 +6488,7 @@ export class Worktables implements INodeType {
 				}
 				switch (operation) {
 					case 'query': {
+						console.log('Run Query:', runQuery);
 						response = await this.helpers.request({
 							method: 'POST',
 							url: 'https://api.monday.com/v2',

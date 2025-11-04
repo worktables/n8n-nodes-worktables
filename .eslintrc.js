@@ -27,6 +27,7 @@ module.exports = {
 			extends: ['plugin:n8n-nodes-base/community'],
 			rules: {
 				'n8n-nodes-base/community-package-json-name-still-default': 'off',
+				'n8n-nodes-base/node-param-required-false': 'off',
 			},
 		},
 		{
@@ -36,6 +37,7 @@ module.exports = {
 			rules: {
 				'n8n-nodes-base/cred-class-field-documentation-url-missing': 'off',
 				'n8n-nodes-base/cred-class-field-documentation-url-miscased': 'off',
+				'n8n-nodes-base/node-param-required-false': 'off',
 			},
 		},
 		{
@@ -53,6 +55,7 @@ module.exports = {
 				'n8n-nodes-base/node-param-description-missing-from-dynamic-options': 'off',
 				'n8n-nodes-base/node-param-description-missing-from-dynamic-multi-options': 'off',
 				'n8n-nodes-base/node-param-description-boolean-without-whether': 'off',
+				'n8n-nodes-base/node-param-required-false': 'off',
 			},
 		},
 		{
@@ -68,6 +71,7 @@ module.exports = {
 				'n8n-nodes-base/node-param-color-type-unused': 'off',
 				'n8n-nodes-base/node-param-display-name-miscased': 'off',
 				'n8n-nodes-base/node-param-description-comma-separated-hyphen': 'off',
+				'n8n-nodes-base/node-param-required-false': 'off',
 			},
 		},
 	],
