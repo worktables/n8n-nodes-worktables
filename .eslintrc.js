@@ -38,6 +38,7 @@ module.exports = {
 				'n8n-nodes-base/cred-class-field-documentation-url-missing': 'off',
 				'n8n-nodes-base/cred-class-field-documentation-url-miscased': 'off',
 				'n8n-nodes-base/node-param-required-false': 'off',
+				'n8n-nodes-base/node-param-min-value-wrong-for-limit': 'off',
 			},
 		},
 		{
@@ -56,6 +57,7 @@ module.exports = {
 				'n8n-nodes-base/node-param-description-missing-from-dynamic-multi-options': 'off',
 				'n8n-nodes-base/node-param-description-boolean-without-whether': 'off',
 				'n8n-nodes-base/node-param-required-false': 'off',
+				'n8n-nodes-base/node-param-min-value-wrong-for-limit': 'off',
 			},
 		},
 		{
@@ -72,6 +74,7 @@ module.exports = {
 				'n8n-nodes-base/node-param-display-name-miscased': 'off',
 				'n8n-nodes-base/node-param-description-comma-separated-hyphen': 'off',
 				'n8n-nodes-base/node-param-required-false': 'off',
+				'n8n-nodes-base/node-param-min-value-wrong-for-limit': 'off',
 			},
 		},
 	],

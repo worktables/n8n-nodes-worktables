@@ -20,6 +20,7 @@ import { parseApiResponse } from '../../utils/isErrorResponse';
 import FormData from 'form-data';
 import axios from 'axios';
 import { parseValue } from '../../utils/parseValue';
+import { buildMentionsGraphQL, parseBinaryNames, makeGraphQLRequest, formatColumnValue, formatFileName, escapeGraphQLString, escapeGraphQLJSONString } from '../../utils/worktablesHelpers';
 
 import countryCodes from '../../utils/country_codes.json';
 
@@ -48,6 +49,7 @@ export class Worktables implements INodeType {
 			baseURL: 'https://api.monday.com/v2',
 			headers: {
 				'Content-Type': 'application/json',
+				'API-Version': '2025-01',
 			},
 		},
 		codex: {
@@ -285,7 +287,7 @@ export class Worktables implements INodeType {
 						action: 'Upload files to column',
 					},
 				],
-				default: 'createOrUpdateItem',
+				default: 'createItem',
 				required: true,
 				displayOptions: {
 					show: { resource: ['item'] },
@@ -303,7 +305,7 @@ export class Worktables implements INodeType {
 						name: 'List',
 						value: 'listUpdates',
 						description: 'List updates',
-						action: 'List an update',
+						action: 'Get an update',
 					},
 					{
 						name: 'Create',
@@ -462,6 +464,14 @@ export class Worktables implements INodeType {
 				type: 'string',
 				default: '',
 				description: 'Enter the query to run',
+				displayOptions: { show: { resource: ['query'] } },
+			},
+			{
+				displayName: 'API Version',
+				name: 'apiVersion',
+				type: 'string',
+				default: '2025-01',
+				description: 'Monday.com API version (e.g., 2025-01, 2024-10)',
 				displayOptions: { show: { resource: ['query'] } },
 			},
 
@@ -679,6 +689,19 @@ export class Worktables implements INodeType {
 							'removeBoardSubscribers',
 							'listGroupItems',
 						],
+					},
+				},
+			},
+			{
+				displayName: 'Is Subitem?',
+				name: 'isSubitem',
+				type: 'boolean',
+				default: false,
+				description: 'Whether the item is a subitem',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['createItem', 'createOrUpdateItem'],
 					},
 				},
 			},
@@ -1049,14 +1072,33 @@ export class Worktables implements INodeType {
 			{
 				displayName: 'Group ID',
 				name: 'groupId',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsDependsOn: ['boardId'],
+					loadOptionsMethod: 'getGroupsFromBoard',
+				},
 				default: '',
 				required: true,
 				description:
 					'Select a group from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
-				hint: 'The group to which the new group will be relative to.',
 				displayOptions: {
 					show: { operation: ['getGroup', 'listGroupItems'] }, // before resource: ['item']
+				},
+			},
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				typeOptions: {
+					minValue: 0,
+				},
+				default: 50,
+				description: 'Max number of results to return',
+				hint: 'If 0 is provided, all items will be returned. This may take longer for large groups.',
+				displayOptions: {
+					show: {
+						operation: ['listGroupItems'],
+					},
 				},
 			},
 			{
@@ -1094,12 +1136,41 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Item ID (Optional)',
+				displayName: 'Item mapping',
+				name: 'itemMapping',
+				type: 'notice',
+				default: '',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['createOrUpdateItem'],
+					},
+				},
+			},
+			{
+				displayName: 'Identifier Column',
+				name: 'identifierColumn',
+				type: 'options',
+				typeOptions: {
+					loadOptionsDependsOn: ['boardId', 'isSubitem'],
+					loadOptionsMethod: 'getColumnsItemsForIdentifier',
+				},
+				default: '',
+				description:
+					'Select the column to use as identifier for finding/updating items. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+				displayOptions: {
+					show: {
+						operation: ['createOrUpdateItem'],
+					},
+				},
+			},
+			{
+				displayName: 'Identifier Value',
 				name: 'itemIdOptional',
 				type: 'string',
 				default: '',
 				description:
-					'Item ID to update. If left empty, a new item will be created. If provided, the existing item will be updated.',
+					'Value in the identifier column to find the item. If left empty, a new item will be created. If provided, the existing item with matching identifier value will be updated.',
 				displayOptions: {
 					show: {
 						operation: ['createOrUpdateItem'],
@@ -1146,7 +1217,7 @@ export class Worktables implements INodeType {
 				type: 'options',
 				typeOptions: {
 					loadOptionsDependsOn: ['boardId'],
-					loadOptionsMethod: 'getItemsFromBoard',
+					loadOptionsMethod: 'getItemsOrSubitemsFromBoard',
 				},
 				default: '',
 				required: true,
@@ -1155,6 +1226,20 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['duplicateItem', 'uploadItemFile'],
+					},
+				},
+			},
+			{
+				displayName: 'Item ID',
+				name: 'itemId',
+				type: 'string',
+				default: '',
+				required: true,
+				description:
+					'Specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
+				displayOptions: {
+					show: {
+						operation: ['getItem', 'deleteItem'],
 					},
 				},
 			},
@@ -1223,20 +1308,6 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Item ID',
-				name: 'itemId',
-				type: 'string',
-				default: '',
-				required: true,
-				description:
-					'Specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
-				displayOptions: {
-					show: {
-						operation: ['getItem', 'deleteItem'],
-					},
-				},
-			},
-			{
 				displayName: 'With Updates',
 				name: 'withUpdates',
 				type: 'boolean',
@@ -1249,6 +1320,18 @@ export class Worktables implements INodeType {
 				},
 			},
 
+			{
+				displayName: 'For item creation',
+				name: 'forItemCreation',
+				type: 'notice',
+				default: '',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['createOrUpdateItem'],
+					},
+				},
+			},
 			{
 				displayName: 'Item Name',
 				name: 'itemName',
@@ -1263,15 +1346,21 @@ export class Worktables implements INodeType {
 				},
 			},
 			{
-				displayName: 'Is Subitem?',
-				name: 'isSubitem',
-				type: 'boolean',
-				default: false,
-				description: 'Whether the item is a subitem',
+				displayName: 'Group Name',
+				name: 'groupName',
+				type: 'options',
+				typeOptions: {
+					loadOptionsDependsOn: ['boardId'],
+					loadOptionsMethod: 'getGroupsFromBoard',
+				},
+				default: 'topics',
+				description:
+					'Select the group where the item will be created. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
 						resource: ['item'],
-						operation: ['createItem', 'createOrUpdateItem'],
+						operation: ['createOrUpdateItem'],
+						isSubitem: [false],
 					},
 				},
 			},
@@ -1294,6 +1383,19 @@ export class Worktables implements INodeType {
 				default: '',
 				description:
 					'If this is a subitem, specify the ID of the parent item. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+			},
+
+			{
+				displayName: 'Column mapping',
+				name: 'ColumnMapping',
+				type: 'notice',
+				default: '',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['createOrUpdateItem'],
+					},
+				},
 			},
 			{
 				displayName: 'Column Values',
@@ -1319,8 +1421,8 @@ export class Worktables implements INodeType {
 								name: 'columnId',
 								type: 'options',
 								typeOptions: {
-									loadOptionsDependsOn: ['boardId'],
-									loadOptionsMethod: 'getColumnsItems',
+									loadOptionsDependsOn: ['boardId', 'isSubitem'],
+									loadOptionsMethod: 'getColumnsItemsForCreateOrUpdate',
 								},
 								default: '',
 							},
@@ -2289,10 +2391,14 @@ export class Worktables implements INodeType {
 			{
 				displayName: 'Board',
 				name: 'boardId',
-				type: 'string',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getBoards',
+				},
 				default: '',
 				required: true,
-				description: 'Enter the board ID',
+				description:
+					'Select the board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
 						operation: ['listBoardItems'],
@@ -2304,11 +2410,11 @@ export class Worktables implements INodeType {
 				name: 'limit',
 				type: 'number',
 				typeOptions: {
-					minValue: 1,
+					minValue: 0,
 				},
 				default: 50,
 				description: 'Max number of results to return',
-				hint: 'If 0 is provided, all items will be returned',
+				hint: 'If 0 is provided, all items will be returned. This may take longer for large boards.',
 				displayOptions: {
 					show: {
 						operation: ['listBoardItems'],
@@ -2340,6 +2446,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
 						},
 						body: JSON.stringify({
 							query: `{ workspaces (limit: ${limit}, page: ${page}) { id name } }`,
@@ -2413,6 +2520,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
 						},
 						body: currentQuery,
 					});
@@ -2820,6 +2928,373 @@ export class Worktables implements INodeType {
 						};
 					});
 			},
+			async getColumnsItemsForIdentifier(this: ILoadOptionsFunctions) {
+				const boardId = this.getCurrentNodeParameter('boardId') as string;
+				const isSubitem = (this.getCurrentNodeParameter('isSubitem') as boolean) || false;
+
+				const credentials = await this.getCredentials('WorktablesApi');
+				const apiKey = credentials?.apiKey;
+
+				// If it's a subitem, we need to get the subitem board columns
+				// Subitems have their own board (e.g., "Subitems of [Board Name]")
+				if (isSubitem) {
+					// Try to get parentId first - if available, we can get subitem board directly
+					let parentId: string | null = null;
+					try {
+						parentId = this.getCurrentNodeParameter('parentId') as string;
+					} catch (e) {
+						// parentId not available yet, will search through items
+					}
+
+					let subitemBoardColumns: any[] = [];
+
+					// If we have parentId, try to get subitem board from parent item's subitems
+					if (parentId) {
+						const response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								'Content-Type': 'application/json',
+								'API-Version': '2025-01',
+							},
+							body: JSON.stringify({
+								query: `query {
+									items(ids: [${parentId}]) {
+										subitems {
+											board {
+												id
+												columns {
+													id
+													title
+													type
+												}
+											}
+										}
+									}
+								}`,
+							}),
+						});
+
+						const parsedResponse = JSON.parse(response);
+						const items = parsedResponse?.data?.items || [];
+						
+						if (items.length > 0 && items[0].subitems && items[0].subitems.length > 0) {
+							const subitem = items[0].subitems[0];
+							if (subitem.board && subitem.board.columns) {
+								subitemBoardColumns = subitem.board.columns;
+							}
+						}
+					}
+
+					// If we don't have parentId or didn't find subitems, search through board items
+					if (subitemBoardColumns.length === 0) {
+						const response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								'Content-Type': 'application/json',
+								'API-Version': '2025-01',
+							},
+							body: JSON.stringify({
+								query: `query {
+									boards(ids: ${boardId}) {
+										items_page(limit: 25) {
+											items {
+												subitems {
+													board {
+														id
+														columns {
+															id
+															title
+															type
+														}
+													}
+												}
+											}
+										}
+									}
+								}`,
+							}),
+						});
+
+						const parsedResponse = JSON.parse(response);
+						const items = parsedResponse?.data?.boards?.[0]?.items_page?.items || [];
+						
+						// Find first subitem to get its board columns
+						// All subitems in a board share the same subitem board
+						for (const item of items) {
+							if (item.subitems && item.subitems.length > 0) {
+								const subitem = item.subitems[0];
+								if (subitem.board && subitem.board.columns) {
+									subitemBoardColumns = subitem.board.columns;
+									break;
+								}
+							}
+						}
+					}
+
+					if (subitemBoardColumns.length === 0) {
+						// Fallback: if no subitems found, return empty array
+						// This can happen if the board doesn't have any subitems yet
+						console.log('No subitems found in board, cannot load subitem columns for identifier');
+						return [];
+					}
+
+					return subitemBoardColumns
+						.filter(
+							(column: { type: string }) =>
+								column.type !== 'subitem' &&
+								column.type !== 'auto_number' &&
+								column.type !== 'creation_log' &&
+								column.type !== 'formula' &&
+								column.type !== 'item_id' &&
+								column.type !== 'last_updated' &&
+								column.type !== 'progress' &&
+								column.type !== 'mirror' &&
+								column.type !== 'subtasks' &&
+								column.type !== 'file' &&
+								column.type !== 'button',
+						)
+						.map((column: { id: string; title: string; type: string }) => {
+							return {
+								name: column.title,
+								value: column.id,
+							};
+						});
+				} else {
+					// Regular item - get columns from main board
+					const response = await this.helpers.request({
+						method: 'POST',
+						url: 'https://api.monday.com/v2',
+						headers: {
+							Authorization: `Bearer ${apiKey}`,
+							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
+						},
+						body: JSON.stringify({
+							query: `query {
+								boards(ids: ${boardId}) {
+									columns {
+										id
+										title
+										type
+									}
+								}
+							}`,
+						}),
+					});
+
+					const parsedResponse = JSON.parse(response);
+
+					return parsedResponse.data.boards[0].columns
+						.filter(
+							(column: { type: string }) =>
+								column.type !== 'subitem' &&
+								column.type !== 'auto_number' &&
+								column.type !== 'creation_log' &&
+								column.type !== 'formula' &&
+								column.type !== 'item_id' &&
+								column.type !== 'last_updated' &&
+								column.type !== 'progress' &&
+								column.type !== 'mirror' &&
+								column.type !== 'subtasks' &&
+								column.type !== 'file' &&
+								column.type !== 'button',
+						)
+						.map((column: { id: string; title: string; type: string }) => {
+							return {
+								name: column.title,
+								value: column.id,
+							};
+						});
+				}
+			},
+			async getColumnsItemsForCreateOrUpdate(this: ILoadOptionsFunctions) {
+				const boardId = this.getCurrentNodeParameter('boardId') as string;
+				const isSubitem = (this.getCurrentNodeParameter('isSubitem') as boolean) || false;
+
+				const credentials = await this.getCredentials('WorktablesApi');
+				const apiKey = credentials?.apiKey;
+
+				// If it's a subitem, we need to get the subitem board columns
+				// Subitems have their own board (e.g., "Subitems of [Board Name]")
+				// We can get it by finding any subitem in the board
+				if (isSubitem) {
+					// Try to get parentId first - if available, we can get subitem board directly
+					let parentId: string | null = null;
+					try {
+						parentId = this.getCurrentNodeParameter('parentId') as string;
+					} catch (e) {
+						// parentId not available yet, will search through items
+					}
+
+					let subitemBoardColumns: any[] = [];
+
+					// If we have parentId, try to get subitem board from parent item's subitems
+					if (parentId) {
+						const response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								'Content-Type': 'application/json',
+								'API-Version': '2025-01',
+							},
+							body: JSON.stringify({
+								query: `query {
+									items(ids: [${parentId}]) {
+										subitems {
+											board {
+												id
+												columns {
+													id
+													title
+													type
+												}
+											}
+										}
+									}
+								}`,
+							}),
+						});
+
+						const parsedResponse = JSON.parse(response);
+						const items = parsedResponse?.data?.items || [];
+						
+						if (items.length > 0 && items[0].subitems && items[0].subitems.length > 0) {
+							const subitem = items[0].subitems[0];
+							if (subitem.board && subitem.board.columns) {
+								subitemBoardColumns = subitem.board.columns;
+							}
+						}
+					}
+
+					// If we don't have parentId or didn't find subitems, search through board items
+					if (subitemBoardColumns.length === 0) {
+						const response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers: {
+								Authorization: `Bearer ${apiKey}`,
+								'Content-Type': 'application/json',
+								'API-Version': '2025-01',
+							},
+							body: JSON.stringify({
+								query: `query {
+									boards(ids: ${boardId}) {
+										items_page(limit: 25) {
+											items {
+												subitems {
+													board {
+														id
+														columns {
+															id
+															title
+															type
+														}
+													}
+												}
+											}
+										}
+									}
+								}`,
+							}),
+						});
+
+						const parsedResponse = JSON.parse(response);
+						const items = parsedResponse?.data?.boards?.[0]?.items_page?.items || [];
+						
+						// Find first subitem to get its board columns
+						// All subitems in a board share the same subitem board
+						for (const item of items) {
+							if (item.subitems && item.subitems.length > 0) {
+								const subitem = item.subitems[0];
+								if (subitem.board && subitem.board.columns) {
+									subitemBoardColumns = subitem.board.columns;
+									break;
+								}
+							}
+						}
+					}
+
+					if (subitemBoardColumns.length === 0) {
+						// Fallback: if no subitems found, return empty array
+						// This can happen if the board doesn't have any subitems yet
+						console.log('No subitems found in board, cannot load subitem columns');
+						return [];
+					}
+
+					return subitemBoardColumns
+						.filter(
+							(column: { type: string }) =>
+								column.type !== 'subitem' &&
+								column.type !== 'auto_number' &&
+								column.type !== 'creation_log' &&
+								column.type !== 'formula' &&
+								column.type !== 'item_id' &&
+								column.type !== 'last_updated' &&
+								column.type !== 'progress' &&
+								column.type !== 'mirror' &&
+								column.type !== 'subtasks' &&
+								column.type !== 'file' &&
+								column.type !== 'button',
+						)
+						.map((column: { id: string; title: string; type: string }) => {
+							return {
+								name: column.title,
+								value: column.id,
+							};
+						});
+				} else {
+					// Regular item - get columns from main board
+					const response = await this.helpers.request({
+						method: 'POST',
+						url: 'https://api.monday.com/v2',
+						headers: {
+							Authorization: `Bearer ${apiKey}`,
+							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
+						},
+						body: JSON.stringify({
+							query: `query {
+								boards(ids: ${boardId}) {
+									columns {
+										id
+										title
+										type
+									}
+								}
+							}`,
+						}),
+					});
+
+					const parsedResponse = JSON.parse(response);
+
+					return parsedResponse.data.boards[0].columns
+						.filter(
+							(column: { type: string }) =>
+								column.type !== 'subitem' &&
+								column.type !== 'auto_number' &&
+								column.type !== 'creation_log' &&
+								column.type !== 'formula' &&
+								column.type !== 'item_id' &&
+								column.type !== 'last_updated' &&
+								column.type !== 'progress' &&
+								column.type !== 'mirror' &&
+								column.type !== 'subtasks' &&
+								column.type !== 'file' &&
+								column.type !== 'button',
+						)
+						.map((column: { id: string; title: string; type: string }) => {
+							return {
+								name: column.title,
+								value: column.id,
+							};
+						});
+				}
+			},
 			async getFolders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const workspaceId = this.getNodeParameter('workspace') as string;
 				const credentials = await this.getCredentials('WorktablesApi');
@@ -2845,6 +3320,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
 						},
 						body: {
 							query: `{ folders (limit: ${limit}, page: ${page}, workspace_ids: ${workspaceId}) { id name } }`,
@@ -2888,6 +3364,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
+							'API-Version': '2025-01',
 						},
 						body: {
 							query: `{ users (limit: ${limit}, page: ${page}) { id name } }`,
@@ -3075,6 +3552,7 @@ export class Worktables implements INodeType {
 			},
 		},
 	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][] | null> {
 		const resource = this.getNodeParameter('resource', 0) as string;
 		const operation = this.getNodeParameter('operation', 0) as string;
@@ -3089,6 +3567,7 @@ export class Worktables implements INodeType {
 		const headers = {
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
+			'API-Version': '2025-01',
 		};
 
 		switch (resource) {
@@ -3773,7 +4252,9 @@ export class Worktables implements INodeType {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const isSubitem = this.getNodeParameter('isSubitem', 0) as boolean;
 						const fetchAllColumns = this.getNodeParameter('fetchAllColumns', 0) as boolean;
-						const columnIds = this.getNodeParameter('columnIds', 0) as string;
+						const columnIds = fetchAllColumns 
+							? '' 
+							: (this.getNodeParameter('columnIds', 0, false) as string) || '';
 
 						const fetchSubitems =
 							!isSubitem && (this.getNodeParameter('fetchSubitems', 0) as boolean);
@@ -3890,7 +4371,13 @@ export class Worktables implements INodeType {
 						});
 
 						const parsed = JSON.parse(rawResponse);
-						const item = parsed.data.items[0];
+						const items = parsed.data?.items;
+						const item = items?.[0];
+
+						// Se o item não existir, retornar array vazio
+						if (!item || !items || items.length === 0) {
+							return [[]];
+						}
 
 						const columnValues = item.column_values || [];
 
@@ -3909,7 +4396,17 @@ export class Worktables implements INodeType {
 						};
 
 						for (const col of columnValues) {
-							if (col.type === 'subtasks') continue;
+							// Filter out column types that are not updateable
+							// Note: mirror columns are included for read operations
+							if (
+								col.type === 'subtasks' ||
+								col.type === 'formula' ||
+								col.type === 'auto_number' ||
+								col.type === 'creation_log' ||
+								col.type === 'last_updated'
+							) {
+								continue;
+							}
 
 							const formattedCol: Record<string, any> = {
 								type: col.type,
@@ -3942,25 +4439,10 @@ export class Worktables implements INodeType {
 									};
 
 									for (const col of subitem.column_values || []) {
-										const subCol: Record<string, any> = {
-											type: col.type,
-											value: await parseValue(col.value),
-											text: col.text,
-										};
-
-										if ('display_value' in col) {
-											subCol.display_value = col.display_value;
+										const subCol = await formatColumnValue(col);
+										if (subCol) {
+											subFormatted.column_values[col.id] = subCol;
 										}
-
-										if ('linked_item_ids' in col) {
-											subCol.linked_item_ids = col.linked_item_ids;
-										}
-
-										if ('mirrored_items' in col) {
-											subCol.mirrored_items = col.mirrored_items;
-										}
-
-										subFormatted.column_values[col.id] = subCol;
 									}
 
 									return subFormatted;
@@ -3979,25 +4461,10 @@ export class Worktables implements INodeType {
 							};
 
 							for (const col of parentItem.column_values || []) {
-								const subCol: Record<string, any> = {
-									type: col.type,
-									value: await parseValue(col.value),
-									text: col.text,
-								};
-
-								if ('display_value' in col) {
-									subCol.display_value = col.display_value;
+								const subCol = await formatColumnValue(col);
+								if (subCol) {
+									parentFormatted.column_values[col.id] = subCol;
 								}
-
-								if ('linked_item_ids' in col) {
-									subCol.linked_item_ids = col.linked_item_ids;
-								}
-
-								if ('mirrored_items' in col) {
-									subCol.mirrored_items = col.mirrored_items;
-								}
-
-								parentFormatted.column_values[col.id] = subCol;
 							}
 							formatted.parent_item = parentFormatted;
 						}
@@ -4085,7 +4552,7 @@ export class Worktables implements INodeType {
 
 											column_values_object[columnId] = { files: links };
 										} else if (typeof value === 'string') {
-											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+											column_values_object[columnId] = value;
 										} else {
 											column_values_object[columnId] = value;
 										}
@@ -4293,14 +4760,13 @@ export class Worktables implements INodeType {
 							'column_values_object FINAL:',
 							JSON.stringify(column_values_object, null, 2),
 						);
+						const escapedColumnValues = escapeGraphQLJSONString(column_values_object);
 						const mutation = `mutation {
 							change_multiple_column_values(
 								create_labels_if_missing: true,
 								board_id: ${boardId},
 								item_id: "${itemId}",
-								column_values: "${JSON.stringify(column_values_object)
-									.replace(/"/g, '\\"')
-									.replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+								column_values: "${escapedColumnValues}"
 							) {
 								id
 								url
@@ -4406,7 +4872,7 @@ export class Worktables implements INodeType {
 
 											column_values_object[columnId] = { files: links };
 										} else if (typeof value === 'string') {
-											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+											column_values_object[columnId] = value;
 										} else {
 											column_values_object[columnId] = value;
 										}
@@ -4605,18 +5071,18 @@ export class Worktables implements INodeType {
 							parentId = this.getNodeParameter('parentId', 0) as string;
 						}
 
-						const columnValuesString = JSON.stringify(column_values_object)
-							.replace(/"/g, '\\"')
-							.replace(/(^|[^\\])\\n/g, '$1\\\\n');
+						const columnValuesString = escapeGraphQLJSONString(column_values_object);
 
 						let groupLine = groupId ? `group_id: "${groupId}",` : '';
+
+						const escapedItemName = escapeGraphQLString(itemName);
 
 						const mutation = parentId
 							? `mutation {
 								create_subitem(
 									create_labels_if_missing: true,
 									parent_item_id: ${parentId},
-									item_name: "${itemName}",
+									item_name: "${escapedItemName}",
 									column_values: "${columnValuesString}"
 								) { id name url
 									board {
@@ -4633,7 +5099,7 @@ export class Worktables implements INodeType {
 								create_item(
 									create_labels_if_missing: true,
 									board_id: ${boardId},
-									item_name: "${itemName}",
+									item_name: "${escapedItemName}",
 									${groupLine}
 									column_values: "${columnValuesString}"
 								) { id name url
@@ -4686,25 +5152,10 @@ export class Worktables implements INodeType {
 						};
 
 						for (const col of itemData.column_values || []) {
-							if (col.type === 'subtasks') continue;
-
-							const formattedCol: Record<string, any> = {
-								type: col.type,
-								value: col.value,
-								text: col.text,
-							};
-
-							if ('display_value' in col) {
-								formattedCol.display_value = col.display_value;
+							const formattedCol = await formatColumnValue(col);
+							if (formattedCol) {
+								formattedResponse.column_values[col.id] = formattedCol;
 							}
-							if ('linked_item_ids' in col) {
-								formattedCol.linked_item_ids = col.linked_item_ids;
-							}
-							if ('mirrored_items' in col) {
-								formattedCol.mirrored_items = col.mirrored_items;
-							}
-
-							formattedResponse.column_values[col.id] = formattedCol;
 						}
 
 						response = JSON.stringify(formattedResponse);
@@ -4738,7 +5189,9 @@ export class Worktables implements INodeType {
 						const itemName = this.getNodeParameter('itemName', 0) as string;
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 						const isSubitem = this.getNodeParameter('isSubitem', 0) as boolean;
-						const itemIdOptional = this.getNodeParameter('itemIdOptional', 0, false) as string;
+						const identifierColumn = this.getNodeParameter('identifierColumn', 0, '') as string;
+						const identifierValue = this.getNodeParameter('itemIdOptional', 0, false) as string;
+						const groupName = this.getNodeParameter('groupName', 0, '') as string;
 
 						const raw = this.getNodeParameter('columnValues', 0) as {
 							column: Array<{
@@ -4819,7 +5272,7 @@ export class Worktables implements INodeType {
 
 											column_values_object[columnId] = { files: links };
 										} else if (typeof value === 'string') {
-											column_values_object[columnId] = value.replace(/\n/g, '\\n');
+											column_values_object[columnId] = value;
 										} else {
 											column_values_object[columnId] = value;
 										}
@@ -4912,58 +5365,353 @@ export class Worktables implements INodeType {
 						let formatted: any;
 
 						// Determine if we should create or update
-						if (itemIdOptional && itemIdOptional.trim() !== '') {
-							// UPDATE existing item
-							console.log('Updating existing item:', itemIdOptional);
+						let itemUpdated = false;
+						let foundItemId: string | null = null;
+						let foundItemBoardId: string | null = null; // Store board_id for subitems
+						
+						// Only search if identifier is provided
+						if (identifierValue && identifierValue.trim() !== '' && identifierColumn && identifierColumn.trim() !== '') {
+							// Try to FIND existing item/subitem by identifier column value
+							console.log('Searching for item/subitem with identifier column:', identifierColumn, 'value:', identifierValue, 'isSubitem:', isSubitem);
 							
-							mutation = `mutation {
-								change_multiple_column_values(
-									create_labels_if_missing: true,
-									board_id: ${boardId},
-									item_id: "${itemIdOptional}",
-									column_values: "${JSON.stringify(column_values_object)
-										.replace(/"/g, '\\"')
-										.replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
-								) {
-									id
-									url
-									board {
-										id
+							// Get parentId if available (for subitems)
+							const parentId = this.getNodeParameter('parentId', 0, false) as string;
+							
+							// Build query to search for items/subitems by column value (search through multiple pages)
+							let cursor: string | null = null;
+							let hasMore = true;
+							
+							while (hasMore && !foundItemId) {
+								const cursorParam = cursor ? `, cursor: "${cursor}"` : '';
+								
+								// If searching for subitem, we need to search in subitems
+								// If we have parentId, search only in that parent's subitems (more efficient)
+								// If searching for item, we search in items
+								// Always include name field in case identifierColumn is "name"
+								const searchQuery = isSubitem && parentId
+									? `query {
+										items(ids: [${parentId}]) {
+											id
+											name
+											subitems {
+												id
+												name
+												board {
+													id
+												}
+												column_values(ids: ["${identifierColumn}"]) {
+													id
+													text
+													value
+													type
+													... on BoardRelationValue {
+														display_value
+													}
+													... on MirrorValue {
+														display_value
+													}
+												}
+											}
+										}
+									}`
+									: isSubitem
+									? `query {
+										boards(ids: [${boardId}]) {
+											items_page(limit: 100${cursorParam}) {
+												items {
+													id
+													name
+													subitems {
+														id
+														name
+														board {
+															id
+														}
+														column_values(ids: ["${identifierColumn}"]) {
+															id
+															text
+															value
+															type
+															... on BoardRelationValue {
+																display_value
+															}
+															... on MirrorValue {
+																display_value
+															}
+														}
+													}
+												}
+												cursor
+											}
+										}
+									}`
+									: `query {
+										boards(ids: [${boardId}]) {
+											items_page(limit: 100${cursorParam}) {
+												items {
+													id
+													name
+													column_values(ids: ["${identifierColumn}"]) {
+														id
+														text
+														value
+														type
+														... on BoardRelationValue {
+															display_value
+														}
+														... on MirrorValue {
+															display_value
+														}
+													}
+												}
+												cursor
+											}
+										}
+									}`;
+								
+								const searchResponse = await this.helpers.request({
+									method: 'POST',
+									url: 'https://api.monday.com/v2',
+									headers,
+									body: { query: searchQuery },
+								});
+								
+								const searchData = JSON.parse(searchResponse);
+								
+								// Handle different response structures:
+								// - When using items(ids: [parentId]), response is searchData?.data?.items
+								// - When using boards(ids: [boardId]) with items_page, response is searchData?.data?.boards?.[0]?.items_page
+								let items: any[] = [];
+								let nextCursor: string | null = null;
+								
+								if (isSubitem && parentId) {
+									// Direct query to parent item - response structure is different
+									items = searchData?.data?.items || [];
+									hasMore = false; // No pagination needed for direct item query
+									console.log(`🔍 Searching subitems of parent ${parentId}, found ${items.length} parent item(s)`);
+									if (items.length > 0 && items[0].subitems) {
+										console.log(`🔍 Parent item has ${items[0].subitems.length} subitem(s)`);
+									}
+								} else {
+									// Board query with pagination
+									const itemsPage = searchData?.data?.boards?.[0]?.items_page;
+									items = itemsPage?.items || [];
+									nextCursor = itemsPage?.cursor || null;
+									hasMore = nextCursor !== null && items.length > 0 && !foundItemId;
+									console.log(`🔍 Searching in board, found ${items.length} item(s)`);
+								}
+								
+								cursor = nextCursor;
+								
+								// Find item/subitem where the identifier column value matches
+								// Special handling for "name" column - it's not in column_values, it's in item.name
+								const isNameColumn = identifierColumn === 'name' || identifierColumn.toLowerCase() === 'name';
+								
+								if (isSubitem) {
+									// Search in subitems
+									for (const item of items) {
+										if (item.subitems && Array.isArray(item.subitems)) {
+											for (const subitem of item.subitems) {
+												let matches = false;
+												
+												if (isNameColumn) {
+													// Compare with subitem name (case-insensitive exact match)
+													const searchValue = identifierValue.trim().toLowerCase();
+													const subitemName = (subitem.name || '').trim().toLowerCase();
+													matches = subitemName === searchValue;
+												} else {
+													const colValue = subitem.column_values?.find((cv: any) => cv.id === identifierColumn);
+													if (colValue) {
+														// For board_relation columns, use display_value; otherwise use text
+														const isBoardRelation = colValue.type === 'board_relation';
+														const compareValue = isBoardRelation 
+															? (colValue.display_value || '').trim()
+															: (colValue.text || '').trim();
+														
+														// Compare with case-insensitive exact matching
+														const searchValue = identifierValue.trim().toLowerCase();
+														const compareValueLower = compareValue.toLowerCase();
+														
+														// Exact match only
+														matches = compareValueLower === searchValue;
+														
+														// Debug log
+														if (matches) {
+															console.log(`✓ Match found! Subitem ${subitem.id} - Column ${identifierColumn} (${colValue.type}): ${isBoardRelation ? 'display_value' : 'text'}="${compareValue}", search="${identifierValue}"`);
+														} else if (compareValue) {
+															console.log(`✗ No match - Subitem ${subitem.id} - Column ${identifierColumn} (${colValue.type}): ${isBoardRelation ? 'display_value' : 'text'}="${compareValue}", search="${identifierValue}"`);
+														}
+													} else {
+														console.log(`⚠ Subitem ${subitem.id} - Column ${identifierColumn} not found in column_values`);
+													}
+												}
+												
+												if (matches) {
+													foundItemId = subitem.id;
+													// Get the board_id of the subitem (subitems are in a different board)
+													foundItemBoardId = subitem.board?.id || null;
+													console.log(`Found subitem with ID: ${foundItemId}, board_id: ${foundItemBoardId}`);
+													break;
+												}
+											}
+											if (foundItemId) break;
+										}
+									}
+								} else {
+									// Search in items
+									for (const item of items) {
+										let matches = false;
+										
+										if (isNameColumn) {
+											// Compare with item name (case-insensitive exact match)
+											const searchValue = identifierValue.trim().toLowerCase();
+											const itemName = (item.name || '').trim().toLowerCase();
+											matches = itemName === searchValue;
+										} else {
+											const colValue = item.column_values?.find((cv: any) => cv.id === identifierColumn);
+											if (colValue) {
+												// For board_relation columns, use display_value; otherwise use text
+												const isBoardRelation = colValue.type === 'board_relation';
+												const compareValue = isBoardRelation 
+													? (colValue.display_value || '').trim()
+													: (colValue.text || '').trim();
+												
+												// Debug: log the raw column value
+												console.log(`🔍 Item ${item.id} - Column ${identifierColumn} (${colValue.type}): raw colValue=`, JSON.stringify(colValue));
+												
+												// Compare with case-insensitive exact matching
+												const searchValue = identifierValue.trim().toLowerCase();
+												const compareValueLower = compareValue.toLowerCase();
+												
+												// Exact match only
+												matches = compareValueLower === searchValue;
+												
+												// Debug log
+												if (matches) {
+													console.log(`✓ Match found! Item ${item.id} - Column ${identifierColumn} (${colValue.type}): ${isBoardRelation ? 'display_value' : 'text'}="${compareValue}", search="${identifierValue}"`);
+												} else if (compareValue) {
+													console.log(`✗ No match - Item ${item.id} - Column ${identifierColumn} (${colValue.type}): ${isBoardRelation ? 'display_value' : 'text'}="${compareValue}", search="${identifierValue}"`);
+												} else {
+													console.log(`⚠ Item ${item.id} - Column ${identifierColumn} (${colValue.type}): compareValue is empty, display_value="${colValue.display_value}", text="${colValue.text}"`);
+												}
+											} else {
+												console.log(`⚠ Item ${item.id} - Column ${identifierColumn} not found in column_values`);
+											}
+										}
+										
+										if (matches) {
+											foundItemId = item.id;
+											console.log(`Found item with ID: ${foundItemId}`);
+											break;
+										}
 									}
 								}
-							}`;
+								
+								hasMore = cursor !== null && items.length > 0 && !foundItemId;
+							}
+							
+							// If item/subitem found, UPDATE it
+							if (foundItemId) {
+								console.log(`Found existing ${isSubitem ? 'subitem' : 'item'}, updating:`, foundItemId);
+								
+								const escapedColumnValues = escapeGraphQLJSONString(column_values_object);
+								
+								// For subitems, use the subitem's board_id; for items, use the main board_id
+								const updateBoardId = (isSubitem && foundItemBoardId) ? foundItemBoardId : boardId;
+								
+								if (isSubitem && !foundItemBoardId) {
+									console.log(`⚠ Warning: Subitem board_id not found, using main board_id ${boardId}. This may cause errors.`);
+								}
+								
+								mutation = `mutation {
+									change_multiple_column_values(
+										create_labels_if_missing: true,
+										board_id: ${updateBoardId},
+										item_id: "${foundItemId}",
+										column_values: "${escapedColumnValues}"
+									) {
+										id
+										url
+										board {
+											id
+										}
+									}
+								}`;
 
-							console.log('Generated Update Mutation:', mutation);
+								console.log('Generated Update Mutation:', mutation);
 
-							response = await this.helpers.request({
-								method: 'POST',
-								url: 'https://api.monday.com/v2',
-								headers,
-								body: { query: mutation },
-							});
+								response = await this.helpers.request({
+									method: 'POST',
+									url: 'https://api.monday.com/v2',
+									headers,
+									body: { query: mutation },
+								});
 
-							const responseData = JSON.parse(response);
-							const itemData = responseData.data.change_multiple_column_values;
-
-							formatted = {
-								id: itemData.id,
-								url: itemData.url,
-								operation: 'update',
-								board_id: itemData.board.id,
-								column_values: column_values_object,
-							};
+								const responseData = JSON.parse(response);
+								
+								// Check for errors or if item doesn't exist
+								if (!responseData.errors && responseData.data && responseData.data.change_multiple_column_values) {
+									const itemData = responseData.data.change_multiple_column_values;
+									
+									if (itemData && itemData.id) {
+										formatted = {
+											id: itemData.id,
+											url: itemData.url || '',
+											operation: 'update',
+											board_id: itemData.board?.id || boardId,
+											column_values: column_values_object,
+										};
+										itemUpdated = true;
+										console.log(`Successfully updated ${isSubitem ? 'subitem' : 'item'}:`, itemData.id);
+									} else {
+										console.log(`Update response missing item data, will create new ${isSubitem ? 'subitem' : 'item'} instead`);
+										itemUpdated = false;
+									}
+								} else {
+									if (responseData.errors) {
+										console.log('Error updating item:', JSON.stringify(responseData.errors));
+									} else {
+										console.log('Update response missing data, will create new item instead');
+									}
+									itemUpdated = false;
+								}
+							} else {
+								// foundItemId is null - item not found
+								console.log(`❌ ${isSubitem ? 'Subitem' : 'Item'} not found with identifier column "${identifierColumn}" and value "${identifierValue}", will create new ${isSubitem ? 'subitem' : 'item'}`);
+								if (isSubitem && parentId) {
+									console.log(`   Parent ID: ${parentId}`);
+								}
+								itemUpdated = false;
+							}
 						} else {
-							// CREATE new item
-							console.log('Creating new item:', itemName);
+							// No identifier provided - always create
+							console.log('No identifier provided, will create new item');
+							itemUpdated = false;
+						}
+						
+						// CREATE new item/subitem (either because identifierValue was empty, item doesn't exist, or update failed)
+						if (!itemUpdated) {
+							// CREATE new item/subitem
+							console.log(`Creating new ${isSubitem ? 'subitem' : 'item'}:`, itemName);
 							
 							const parentId = this.getNodeParameter('parentId', 0, false) as string;
+							
+							// Validate: if isSubitem is true, parentId must be provided
+							if (isSubitem && !parentId) {
+								throw new NodeApiError(this.getNode(), {
+									message: 'Parent Item is required when creating a subitem. Please select a parent item.',
+								});
+							}
+							
+							const escapedItemName = escapeGraphQLString(itemName);
+							const escapedColumnValues = escapeGraphQLJSONString(column_values_object);
 							
 							if (isSubitem && parentId) {
 								mutation = `mutation {
 									create_subitem(
 										parent_item_id: ${parentId},
-										item_name: "${itemName}",
-										column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"').replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+										item_name: "${escapedItemName}",
+										column_values: "${escapedColumnValues}"
 									) {
 										id
 										name
@@ -4974,11 +5722,15 @@ export class Worktables implements INodeType {
 									}
 								}`;
 							} else {
+								// Use groupName if provided, otherwise use "topics" as default
+								const finalGroupId = groupName || 'topics';
+								const escapedFinalGroupId = escapeGraphQLString(finalGroupId);
 								mutation = `mutation {
 									create_item(
 										board_id: ${boardId},
-										item_name: "${itemName}",
-										column_values: "${JSON.stringify(column_values_object).replace(/"/g, '\\"').replace(/(^|[^\\])\\n/g, '$1\\\\n')}"
+										group_id: "${escapedFinalGroupId}",
+										item_name: "${escapedItemName}",
+										column_values: "${escapedColumnValues}"
 									) {
 										id
 										name
@@ -4998,16 +5750,30 @@ export class Worktables implements INodeType {
 							});
 
 							const responseData = JSON.parse(response);
+							
+							// Check for errors first
+							if (responseData.errors) {
+								throw new NodeApiError(this.getNode(), {
+									message: `Error creating ${isSubitem ? 'subitem' : 'item'}: ${JSON.stringify(responseData.errors)}`,
+								});
+							}
+							
 							const itemData = isSubitem && parentId 
-								? responseData.data.create_subitem 
-								: responseData.data.create_item;
+								? responseData.data?.create_subitem 
+								: responseData.data?.create_item;
+
+							if (!itemData || !itemData.id) {
+								throw new NodeApiError(this.getNode(), {
+									message: `Error creating ${isSubitem ? 'subitem' : 'item'}: No item data returned`,
+								});
+							}
 
 							formatted = {
 								id: itemData.id,
-								name: itemData.name,
-								url: itemData.url,
+								name: itemData.name || itemName,
+								url: itemData.url || '',
 								operation: 'create',
-								board_id: itemData.board.id,
+								board_id: itemData.board?.id || boardId,
 								column_values: column_values_object,
 							};
 
@@ -5044,16 +5810,8 @@ export class Worktables implements INodeType {
 					case 'duplicateItem': {
 						console.log('Duplicate an item');
 
-						const isSubitem = this.getNodeParameter('showSubitems', 0) as boolean;
-						let itemId = '';
-						let subitemId = '';
-						if (isSubitem) {
-							subitemId = this.getNodeParameter('subitemId', 0) as string;
-						} else {
-							itemId = this.getNodeParameter('itemId', 0) as string;
-						}
+						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const withUpdates = this.getNodeParameter('withUpdates', 0) as boolean;
-
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 
 						if (!itemId || !boardId) {
@@ -5065,7 +5823,7 @@ export class Worktables implements INodeType {
 						const mutation = `
 								mutation {
 									duplicate_item(
-										item_id: ${itemId || subitemId},
+										item_id: ${itemId},
 										board_id: ${boardId},
 										with_updates: ${withUpdates}
 									) { id }
@@ -5091,52 +5849,191 @@ export class Worktables implements INodeType {
 							throw new NodeApiError(this.getNode(), { message: 'Board ID is required.' });
 						}
 
-						const query = `
+						// Build column values query
+						const queryColumnValues = `
+							column_values {
+								id
+								text
+								value
+								type
+								... on BoardRelationValue {
+									display_value
+									linked_item_ids
+								}
+								... on MirrorValue {
+									display_value
+									mirrored_items {
+										linked_board_id
+									}
+								}
+							}
+						`;
+
+						const querySubitems = `
+							subitems {
+								id
+								name
+								url
+								board {
+									id
+								}
+								created_at
+								updated_at
+								${queryColumnValues}
+							}
+						`;
+
+						let allItems: any[] = [];
+						let cursor: string | null = null;
+						const pageLimit = 100; // Use 100 per page for pagination
+
+						do {
+							const cursorParam: string = cursor ? `, cursor: "${cursor}"` : '';
+							// Calculate how many items to fetch in this page
+							let currentLimit: number;
+							if (limit === 0) {
+								// Fetching all items, use page limit
+								currentLimit = pageLimit;
+							} else {
+								// Fetching limited items, calculate remaining
+								const remaining = limit - allItems.length;
+								currentLimit = remaining > pageLimit ? pageLimit : remaining;
+							}
+
+							const query: string = `
 								query {
-									boards (ids: ${boardId}) {
-										items_page(limit: ${limit}) {
+									boards (ids: [${boardId}]) {
+										items_page(limit: ${currentLimit}${cursorParam}) {
+											cursor
 											items {
 												id
-												updates {
-												id
-												body
-												}
-												assets {
-												id
 												name
-												public_url
 												url
-												}
-												column_values {
-												id
-												text
-												value
+												board {
+													id
 												}
 												group {
-												id
-												title
-												}
-												subitems {
-												id
-												column_values {
 													id
-													text
-													value
+													title
+													color
+													position
 												}
-												}
-												url
+												created_at
+												updated_at
+												${queryColumnValues}
+												${querySubitems}
 											}
 										}
 									}
-									}`;
+								}
+							`;
 
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query },
-						});
-						break;
+							const rawResponse: any = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query },
+							});
+
+							const parsed: any = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+							const itemsPage: any = parsed?.data?.boards?.[0]?.items_page;
+							const items = itemsPage?.items || [];
+							cursor = itemsPage?.cursor || null;
+
+							allItems = allItems.concat(items);
+
+							// If limit is set and we've reached it, break
+							if (limit > 0 && allItems.length >= limit) {
+								// Trim to exact limit if we got more
+								if (allItems.length > limit) {
+									allItems = allItems.slice(0, limit);
+								}
+								break;
+							}
+
+							// If no cursor, we've reached the end
+							if (!cursor) {
+								break;
+							}
+						} while (true);
+
+						// Format items in the same pattern as other fetches
+						const formattedItems = await Promise.all(
+							allItems.map(async (item: any) => {
+								const columnValues = item.column_values || [];
+
+								const formatted: Record<string, any> = {
+									id: item.id,
+									name: item.name,
+									url: item.url,
+									created_at: item.created_at,
+									updated_at: item.updated_at,
+									board: item.board ? {
+										id: item.board.id,
+									} : undefined,
+									group: item.group ? {
+										id: item.group.id,
+										title: item.group.title,
+										color: item.group.color,
+										position: item.group.position,
+									} : undefined,
+									column_values: {},
+								};
+
+								for (const col of columnValues) {
+									// Filter out column types that are not updateable
+									// Note: mirror columns are included for read operations
+									// formatColumnValue also filters these, but we check here for clarity
+									if (
+										col.type === 'subtasks' ||
+										col.type === 'formula' ||
+										col.type === 'auto_number' ||
+										col.type === 'creation_log' ||
+										col.type === 'last_updated'
+									) {
+										continue;
+									}
+
+									const formattedCol = await formatColumnValue(col);
+									if (formattedCol) {
+										formatted.column_values[col.id] = formattedCol;
+									}
+								}
+
+								// Format subitems if they exist
+								if (item.subitems && Array.isArray(item.subitems)) {
+									formatted.subitems = await Promise.all(
+										item.subitems.map(async (subitem: any) => {
+											const subFormatted: Record<string, any> = {
+												id: subitem.id,
+												name: subitem.name,
+												url: subitem.url,
+												created_at: subitem.created_at,
+												updated_at: subitem.updated_at,
+												board: subitem.board ? {
+													id: subitem.board.id,
+												} : undefined,
+												column_values: {},
+											};
+
+											for (const col of subitem.column_values || []) {
+												const subCol = await formatColumnValue(col);
+												if (subCol) {
+													subFormatted.column_values[col.id] = subCol;
+												}
+											}
+
+											return subFormatted;
+										}),
+									);
+								}
+
+								return formatted;
+							}),
+						);
+
+						// Return each item as a separate output item
+						return [formattedItems.map((item: Record<string, any>) => ({ json: item as IDataObject }))];
 					}
 					case 'searchItems': {
 						const boardId = this.getNodeParameter('boardId', 0) as string;
@@ -5230,6 +6127,16 @@ export class Worktables implements INodeType {
 											text
 											value
 											type
+											... on BoardRelationValue {
+												display_value
+												linked_item_ids
+											}
+											... on MirrorValue {
+												display_value
+												mirrored_items {
+													linked_board_id
+												}
+											}
 										}
 										group {
 											id
@@ -5271,27 +6178,12 @@ export class Worktables implements INodeType {
 
 								if (!fetchColumnValues) return formatted;
 
-								for (const col of item.column_values || []) {
-									if (col.type === 'subtasks') continue;
-
-									const formattedCol: Record<string, any> = {
-										type: col.type,
-										value: await parseValue(col.value),
-										text: col.text,
-									};
-
-									if ('display_value' in col) {
-										formattedCol.display_value = col.display_value;
-									}
-									if ('linked_item_ids' in col) {
-										formattedCol.linked_item_ids = col.linked_item_ids;
-									}
-									if ('mirrored_items' in col) {
-										formattedCol.mirrored_items = col.mirrored_items;
-									}
-
+							for (const col of item.column_values || []) {
+								const formattedCol = await formatColumnValue(col);
+								if (formattedCol) {
 									formatted.column_values[col.id] = formattedCol;
 								}
+							}
 
 								return formatted;
 							}),
@@ -5608,6 +6500,16 @@ export class Worktables implements INodeType {
 											text
 											value
 											type
+											... on BoardRelationValue {
+												display_value
+												linked_item_ids
+											}
+											... on MirrorValue {
+												display_value
+												mirrored_items {
+													linked_board_id
+												}
+											}
 										}
 										group {
 											id
@@ -5705,7 +6607,17 @@ export class Worktables implements INodeType {
 								if (!fetchColumnValues) return formatted;
 
 								for (const col of item.column_values || []) {
-									if (col.type === 'subtasks') continue;
+									// Filter out column types that are not updateable
+									// Note: mirror columns are included for read operations
+									if (
+										col.type === 'subtasks' ||
+										col.type === 'formula' ||
+										col.type === 'auto_number' ||
+										col.type === 'creation_log' ||
+										col.type === 'last_updated'
+									) {
+										continue;
+									}
 
 									const formattedCol: Record<string, any> = {
 										type: col.type,
@@ -5715,6 +6627,14 @@ export class Worktables implements INodeType {
 
 									if ('display_value' in col) {
 										formattedCol.display_value = col.display_value;
+									}
+
+									if ('linked_item_ids' in col) {
+										formattedCol.linked_item_ids = col.linked_item_ids;
+									}
+
+									if ('mirrored_items' in col) {
+										formattedCol.mirrored_items = col.mirrored_items;
 									}
 
 									formatted.column_values[col.id] = formattedCol;
@@ -5748,10 +6668,7 @@ export class Worktables implements INodeType {
 							});
 						}
 
-						const binaryNames = binaryNamesRaw
-							.split(',')
-							.map((name) => name.trim())
-							.filter(Boolean);
+						const binaryNames = parseBinaryNames(binaryNamesRaw);
 
 						for (const binaryName of binaryNames) {
 							let binaryData;
@@ -5763,13 +6680,7 @@ export class Worktables implements INodeType {
 							}
 
 							const fileBuffer = Buffer.from(binaryData.data, 'base64');
-							let fileName = binaryData.fileName || 'upload';
-							// Only add extension if fileName doesn't already have one
-							if (!fileName.includes('.') && binaryData.fileExtension) {
-								fileName = `${fileName}.${binaryData.fileExtension}`;
-							} else if (!fileName.includes('.')) {
-								fileName = `${fileName}.dat`;
-							}
+							const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
 
 							console.log('Binary Data:', binaryData);
 							console.log('fileName:', fileName);
@@ -5790,10 +6701,11 @@ export class Worktables implements INodeType {
 							});
 
 							const uploadFile = await axios.post('https://api.monday.com/v2/file', form, {
-								headers: {
-									Authorization: headers.Authorization,
-									...form.getHeaders(),
-								},
+							headers: {
+								Authorization: headers.Authorization,
+								'API-Version': '2025-01',
+								...form.getHeaders(),
+							},
 								maxContentLength: Infinity,
 								maxBodyLength: Infinity,
 							});
@@ -5807,6 +6719,7 @@ export class Worktables implements INodeType {
 					case 'listGroupItems': {
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 						const groupId = this.getNodeParameter('groupId', 0) as string;
+						const limit = this.getNodeParameter('limit', 0) as number;
 
 						if (!boardId || !groupId) {
 							throw new NodeApiError(this.getNode(), {
@@ -5814,85 +6727,132 @@ export class Worktables implements INodeType {
 							});
 						}
 
-						const query = `
-						query {
-							boards (ids: [${boardId}]) {
-								groups (ids: "${groupId}") {
-									items_page {
-										items {
-											id
-											name
-											column_values {
-												id
-												text
-												value
-												type
-												... on BoardRelationValue {
-													display_value
-													linked_item_ids
-												}
-												... on MirrorValue {
-													display_value
-													mirrored_items {
-														linked_board_id
-													}
-												}
-											}
-											group {
-												id
-												title
-											}
-											state
-											created_at
-											updated_at
-										}
+						// Build column values query
+						const queryColumnValues = `
+							column_values {
+								id
+								text
+								value
+								type
+								... on BoardRelationValue {
+									display_value
+									linked_item_ids
+								}
+								... on MirrorValue {
+									display_value
+									mirrored_items {
+										linked_board_id
 									}
 								}
 							}
-						}
-	`;
+						`;
 
-						const rawResponse = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query },
-						});
-						const parsed = JSON.parse(rawResponse);
-						const items = parsed?.data?.boards?.[0]?.groups?.[0]?.items_page?.items || [];
+						let allItems: any[] = [];
+						let cursor: string | null = null;
+						const pageLimit = 100; // Use 100 per page for pagination
+
+						do {
+							const cursorParam: string = cursor ? `, cursor: "${cursor}"` : '';
+							// Calculate how many items to fetch in this page
+							let currentLimit: number;
+							if (limit === 0) {
+								// Fetching all items, use page limit
+								currentLimit = pageLimit;
+							} else {
+								// Fetching limited items, calculate remaining
+								const remaining = limit - allItems.length;
+								currentLimit = remaining > pageLimit ? pageLimit : remaining;
+							}
+
+							const query = `
+								query {
+									boards (ids: [${boardId}]) {
+										groups (ids: "${groupId}") {
+											items_page(limit: ${currentLimit}${cursorParam}) {
+												cursor
+												items {
+													id
+													name
+													url
+													board {
+														id
+													}
+													group {
+														id
+														title
+														color
+														position
+													}
+													created_at
+													updated_at
+													${queryColumnValues}
+												}
+											}
+										}
+									}
+								}
+							`;
+
+							const rawResponse = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query },
+							});
+							const parsed = JSON.parse(rawResponse);
+							const itemsPage = parsed?.data?.boards?.[0]?.groups?.[0]?.items_page;
+							const items = itemsPage?.items || [];
+							cursor = itemsPage?.cursor || null;
+
+							allItems = allItems.concat(items);
+
+							// Stop if we've reached the limit or there's no more data
+							if (limit > 0 && allItems.length >= limit) {
+								allItems = allItems.slice(0, limit);
+								break;
+							}
+						} while (cursor && (limit === 0 || allItems.length < limit));
 
 						const formattedItems = await Promise.all(
-							items.map(async (item: any) => {
+							allItems.map(async (item: any) => {
+								const columnValues = item.column_values || [];
+
 								const formatted: Record<string, any> = {
 									id: item.id,
 									name: item.name,
-									group: item.group,
-									state: item.state,
+									url: item.url,
 									created_at: item.created_at,
 									updated_at: item.updated_at,
+									board: item.board ? {
+										id: item.board.id,
+									} : undefined,
+									group: item.group ? {
+										id: item.group.id,
+										title: item.group.title,
+										color: item.group.color,
+										position: item.group.position,
+									} : undefined,
 									column_values: {},
 								};
 
-								for (const col of item.column_values || []) {
-									if (col.type === 'subtasks') continue;
-
-									const formattedCol: Record<string, any> = {
-										type: col.type,
-										value: await parseValue(col.value),
-										text: col.text,
-									};
-
-									if ('display_value' in col) {
-										formattedCol.display_value = col.display_value;
-									}
-									if ('linked_item_ids' in col) {
-										formattedCol.linked_item_ids = col.linked_item_ids;
-									}
-									if ('mirrored_items' in col) {
-										formattedCol.mirrored_items = col.mirrored_items;
+								for (const col of columnValues) {
+									// Filter out column types that are not updateable
+									// Note: mirror columns are included for read operations
+									// formatColumnValue also filters these, but we check here for clarity
+									if (
+										col.type === 'subtasks' ||
+										col.type === 'formula' ||
+										col.type === 'auto_number' ||
+										col.type === 'creation_log' ||
+										col.type === 'last_updated'
+									) {
+										continue;
 									}
 
-									formatted.column_values[col.id] = formattedCol;
+									const formattedCol = await formatColumnValue(col);
+									if (formattedCol) {
+										formatted.column_values[col.id] = formattedCol;
+									}
 								}
 
 								return formatted;
@@ -5959,7 +6919,16 @@ export class Worktables implements INodeType {
 						if (response.success) {
 							const parsed = JSON.parse(response.data);
 							const updates = parsed?.data?.items?.[0]?.updates || [];
-							return [updates.map((update: unknown) => ({ json: update }))];
+							const formattedUpdates = updates.map((update: any) => {
+								const pinnedToTop = update.pinned_to_top || [];
+								const isPinnedToTop = Array.isArray(pinnedToTop) && pinnedToTop.length > 0;
+								
+								return {
+									...update,
+									pinned_to_top: isPinnedToTop,
+								};
+							});
+							return [formattedUpdates.map((update: unknown) => ({ json: update }))];
 						} else {
 							const parsed = JSON.parse(response.data);
 							const firstError = parsed.errors || { message: 'Unknown error' };
@@ -5990,13 +6959,7 @@ export class Worktables implements INodeType {
 						console.log('Mentions Collection:', JSON.stringify(mentionsCollection, null, 2));
 						console.log('Should Mention:', shouldMention);
 
-						let mentionsGraphQL = '';
-						if (shouldMention && mentionsCollection.mention.length > 0) {
-							const mentions = mentionsCollection.mention
-								.map((m) => `{id: ${m.id}, type: ${m.type}}`)
-								.join(', ');
-							mentionsGraphQL = `, mentions_list: [${mentions}]`;
-						}
+						const mentionsGraphQL = buildMentionsGraphQL(shouldMention, mentionsCollection);
 
 						// Use GraphQL variables to properly handle special characters, line breaks, and HTML
 						const mutation = isReply
@@ -6031,12 +6994,7 @@ export class Worktables implements INodeType {
 
 						console.log('mutation:', mutation);
 						console.log('variables:', variables);
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query: mutation, variables },
-						});
+						response = await makeGraphQLRequest(this, mutation, headers, variables);
 
 						console.log('Create Update Result:', JSON.stringify(response, null, 2));
 
@@ -6049,10 +7007,7 @@ export class Worktables implements INodeType {
 
 						for (let i = 0; i < items.length; i++) {
 							const attachmentsString = this.getNodeParameter('attachmentsUpdate', i) as string;
-							const binaryNames = attachmentsString
-								.split(',')
-								.map((name) => name.trim())
-								.filter(Boolean);
+							const binaryNames = parseBinaryNames(attachmentsString);
 
 							console.log(`Item ${i} - Binary names to process:`, binaryNames);
 
@@ -6066,7 +7021,7 @@ export class Worktables implements INodeType {
 								}
 
 								const fileBuffer = Buffer.from(binaryData.data, 'base64');
-								const fileName = binaryData.fileName || 'upload.dat';
+								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension, 'upload', 'dat');
 
 								const form = new FormData();
 								form.append(
@@ -6083,10 +7038,11 @@ export class Worktables implements INodeType {
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-									headers: {
-										Authorization: headers.Authorization,
-										...form.getHeaders(),
-									},
+							headers: {
+								Authorization: headers.Authorization,
+								'API-Version': '2025-01',
+								...form.getHeaders(),
+							},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
@@ -6116,13 +7072,7 @@ export class Worktables implements INodeType {
 						console.log('Mentions Collection:', JSON.stringify(mentionsCollection, null, 2));
 						console.log('Should Mention:', shouldMention);
 
-						let mentionsGraphQL = '';
-						if (shouldMention && mentionsCollection.mention.length > 0) {
-							const mentions = mentionsCollection.mention
-								.map((m) => `{id: ${m.id}, type: ${m.type}}`)
-								.join(', ');
-							mentionsGraphQL = `, mentions_list: [${mentions}]`;
-						}
+						const mentionsGraphQL = buildMentionsGraphQL(shouldMention, mentionsCollection);
 
 						// Use GraphQL variables to properly handle special characters, line breaks, and HTML
 						const mutation = `
@@ -6140,19 +7090,11 @@ export class Worktables implements INodeType {
 
 						console.log('mutation:', mutation);
 						console.log('variables:', variables);
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query: mutation, variables },
-						});
+						response = await makeGraphQLRequest(this, mutation, headers, variables);
 
 						for (let i = 0; i < items.length; i++) {
 							const attachmentsString = this.getNodeParameter('attachmentsUpdate', i) as string;
-							const binaryNames = attachmentsString
-								.split(',')
-								.map((name) => name.trim())
-								.filter(Boolean);
+							const binaryNames = parseBinaryNames(attachmentsString);
 
 							console.log(`Item ${i} - Binary names to process:`, binaryNames);
 
@@ -6166,7 +7108,7 @@ export class Worktables implements INodeType {
 								}
 
 								const fileBuffer = Buffer.from(binaryData.data, 'base64');
-								const fileName = binaryData.fileName || 'upload.dat';
+								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension, 'upload', 'dat');
 
 								const form = new FormData();
 								form.append(
@@ -6183,10 +7125,11 @@ export class Worktables implements INodeType {
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-									headers: {
-										Authorization: headers.Authorization,
-										...form.getHeaders(),
-									},
+							headers: {
+								Authorization: headers.Authorization,
+								'API-Version': '2025-01',
+								...form.getHeaders(),
+							},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
@@ -6231,10 +7174,7 @@ export class Worktables implements INodeType {
 							});
 						}
 
-						const binaryNames = attachmentsRaw
-							.split(',')
-							.map((name) => name.trim())
-							.filter(Boolean);
+						const binaryNames = parseBinaryNames(attachmentsRaw);
 
 						for (let i = 0; i < items.length; i++) {
 							for (const binaryName of binaryNames) {
@@ -6247,9 +7187,7 @@ export class Worktables implements INodeType {
 								}
 
 								const fileBuffer = Buffer.from(binaryData.data, 'base64');
-								const fileName = `${binaryData.fileName || 'upload'}.${
-									binaryData.fileExtension || 'dat'
-								}`;
+								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
 
 								console.log(`Item ${i} - Uploading file '${fileName}' from '${binaryName}'`);
 
@@ -6268,10 +7206,11 @@ export class Worktables implements INodeType {
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-									headers: {
-										Authorization: headers.Authorization,
-										...form.getHeaders(),
-									},
+							headers: {
+								Authorization: headers.Authorization,
+								'API-Version': '2025-01',
+								...form.getHeaders(),
+							},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
@@ -6483,16 +7422,22 @@ export class Worktables implements INodeType {
 
 			case 'query': {
 				const runQuery = this.getNodeParameter('runQuery', 0) as string[];
+				const apiVersion = this.getNodeParameter('apiVersion', 0) as string;
 				if (!runQuery) {
 					throw new NodeApiError(this.getNode(), { message: 'Invalid item data.' });
 				}
 				switch (operation) {
 					case 'query': {
 						console.log('Run Query:', runQuery);
+						const apiUrl = `https://api.monday.com/v2`;
+						const queryHeaders = {
+							...headers,
+							'API-Version': apiVersion,
+						};
 						response = await this.helpers.request({
 							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
+							url: apiUrl,
+							headers: queryHeaders,
 							body: { query: runQuery },
 						});
 						break;
