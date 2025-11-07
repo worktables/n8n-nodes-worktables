@@ -1,23 +1,19 @@
 {
-  "name": "n8n-nodes-worktables",
-  "version": "0.1.0",
-  "description": "",
+  "name": "@worktables/n8n-nodes-worktables",
+  "version": "12.5.0",
+  "description": "n8n nodes for Monday.com integration",
   "keywords": [
     "n8n-community-node-package"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "",
-    "email": ""
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/worktables/n8n-nodes-worktables.git"
+    "name": "Eduardo Polanski"
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && gulp build:icons",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc && gulp build:icons",
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
@@ -30,15 +26,18 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js"
+      "dist/credentials/WorktablesAPI.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js"
+      "dist/nodes/Worktables/Worktables.node.js",
+      "dist/nodes/Worktables/MondayWebhook.node.js"
+    ],
+    "keywords": [
+      "n8n-community-node-package"
     ]
   },
   "devDependencies": {
+    "@types/node": "^22.13.9",
     "@typescript-eslint/parser": "~5.45",
     "eslint-plugin-n8n-nodes-base": "^1.11.0",
     "gulp": "^4.0.2",
@@ -48,5 +47,10 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "fetch-blob": "^4.0.0",
+    "form-data": "^4.0.2"
   }
 }
