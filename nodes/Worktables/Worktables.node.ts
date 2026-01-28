@@ -5183,11 +5183,29 @@ export class Worktables implements INodeType {
 						if (!response.success) {
 							const parsed = JSON.parse(response.data);
 							const firstError = parsed.errors || { message: 'Unknown error' };
-							console.log(firstError[0]);
-							throw new NodeApiError(this.getNode(), firstError, {
-								message: firstError.message,
-								description: JSON.stringify(firstError, null, 2),
-							});
+							const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
+							console.log('Error:', errorData);
+							
+							const continueOnFail = this.continueOnFail();
+							
+							if (continueOnFail) {
+								// Return error as output item with error property
+								return [[{
+									json: {
+										error: {
+											message: errorData.message || 'Unknown error',
+											details: errorData,
+										}
+									}
+								}]];
+							} else {
+								// Throw error normally
+								const error = new NodeApiError(this.getNode(), errorData, {
+									message: errorData.message || 'Unknown error',
+									description: JSON.stringify(errorData, null, 2),
+								});
+								throw error;
+							}
 						}
 
 						const parsedResponse = JSON.parse(responseRaw);
@@ -7026,10 +7044,28 @@ export class Worktables implements INodeType {
 						} else {
 							const parsed = JSON.parse(response.data);
 							const firstError = parsed.errors || { message: 'Unknown error' };
-							throw new NodeApiError(this.getNode(), firstError, {
-								message: firstError.message,
-								description: JSON.stringify(firstError, null, 2),
-							});
+							const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
+							
+							const continueOnFail = this.continueOnFail();
+							
+							if (continueOnFail) {
+								// Return error as output item with error property
+								return [[{
+									json: {
+										error: {
+											message: errorData.message || 'Unknown error',
+											details: errorData,
+										}
+									}
+								}]];
+							} else {
+								// Throw error normally
+								const error = new NodeApiError(this.getNode(), errorData, {
+									message: errorData.message || 'Unknown error',
+									description: JSON.stringify(errorData, null, 2),
+								});
+								throw error;
+							}
 						}
 					}
 					case 'createUpdate': {
@@ -7296,6 +7332,35 @@ export class Worktables implements INodeType {
 							updateId: updateId.toString(),
 							itemId: itemId.toString(),
 						});
+
+						// Check for errors before returning
+						const parsedResponse = await parseApiResponse(response);
+						if (!parsedResponse.success) {
+							const parsed = JSON.parse(parsedResponse.data);
+							const firstError = parsed.errors || { message: 'Unknown error' };
+							const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
+							
+							const continueOnFail = this.continueOnFail();
+							
+							if (continueOnFail) {
+								// Return error as output item with error property
+								return [[{
+									json: {
+										error: {
+											message: errorData.message || 'Unknown error',
+											details: errorData,
+										}
+									}
+								}]];
+							} else {
+								// Throw error normally
+								const error = new NodeApiError(this.getNode(), errorData, {
+									message: errorData.message || 'Unknown error',
+									description: JSON.stringify(errorData, null, 2),
+								});
+								throw error;
+							}
+						}
 
 						return [[{ json: JSON.parse(response) }]];
 					}
@@ -7670,11 +7735,32 @@ export class Worktables implements INodeType {
 		} else {
 			const parsed = JSON.parse(response.data);
 			const firstError = parsed.errors || { message: 'Unknown error' };
-			console.log(firstError[0]);
-			throw new NodeApiError(this.getNode(), firstError, {
-				message: firstError.message,
-				description: JSON.stringify(firstError, null, 2),
-			});
+			const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
+			console.log('Error:', errorData);
+
+			const continueOnFail = this.continueOnFail();
+			console.log('Continue on fail:', continueOnFail);
+			
+			if (continueOnFail) {
+				// Return error as output item with error property
+				// Format: [[{ json: {...} }]] - array of arrays for INodeExecutionData[][]
+				return [[{
+					json: {
+						error: {
+							message: errorData.message || 'Unknown error',
+							details: errorData,
+						}
+					}
+				}]];
+			} else {
+				// Throw error normally
+				const error = new NodeApiError(this.getNode(), errorData, {
+				  message: errorData.message || 'Unknown error',
+				  description: JSON.stringify(errorData, null, 2),
+				});
+				
+				throw error;
+			  }
 		}
 	}
 }
