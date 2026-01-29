@@ -24,6 +24,9 @@ import { buildMentionsGraphQL, parseBinaryNames, makeGraphQLRequest, formatColum
 
 import countryCodes from '../../utils/country_codes.json';
 
+// API Version constant - update this when API version changes
+const API_VERSION = '2026-01';
+
 export class Worktables implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Worktables',
@@ -49,7 +52,7 @@ export class Worktables implements INodeType {
 			baseURL: 'https://api.monday.com/v2',
 			headers: {
 				'Content-Type': 'application/json',
-				'API-Version': '2025-01',
+				'API-Version': API_VERSION,
 			},
 		},
 		codex: {
@@ -475,7 +478,7 @@ export class Worktables implements INodeType {
 				displayName: 'API Version',
 				name: 'apiVersion',
 				type: 'string',
-				default: '2025-01',
+				default: API_VERSION,
 				description: 'Monday.com API version (e.g., 2025-01, 2024-10)',
 				displayOptions: { show: { resource: ['query'] } },
 			},
@@ -2476,7 +2479,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: JSON.stringify({
 							query: `{ workspaces (limit: ${limit}, page: ${page}) { id name } }`,
@@ -2550,7 +2553,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: currentQuery,
 					});
@@ -2593,6 +2596,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `query { boards(ids: ${boardId} ) { groups { id title color position archived deleted} } }`,
@@ -2626,6 +2630,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `query {
@@ -2660,6 +2665,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `query { boards(ids: ${
@@ -2712,6 +2718,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `query { boards(ids: ${boardId}) { items_page (limit: 500) { items { id name } } } }`,
@@ -2758,6 +2765,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `{
@@ -2773,9 +2781,17 @@ export class Worktables implements INodeType {
 
 				const parsedResponse = JSON.parse(response);
 				console.log(JSON.stringify(parsedResponse, null, 2));
-				return parsedResponse.data.items[0].subitems.map((item: { id: string; name: string }) => ({
-					name: item.name,
-					value: item.id,
+				
+				// API 2025-04+: Handle null subitems (deleted boards) or empty arrays
+				const item = parsedResponse.data?.items?.[0];
+				if (!item || item.subitems === null || !Array.isArray(item.subitems) || item.subitems.length === 0) {
+					// Return empty array if subitems is null or empty
+					return [];
+				}
+				
+				return item.subitems.map((subitem: { id: string; name: string }) => ({
+					name: subitem.name,
+					value: subitem.id,
 				}));
 			},
 			async getColumnsFromBoard(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -2800,6 +2816,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query { boards(ids: ${boardId}) { columns { id title type } } }`,
@@ -2847,6 +2864,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query { boards(ids: ${boardId}) { subscribers { id name } } }`,
@@ -2877,6 +2895,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query {
@@ -2892,7 +2911,14 @@ export class Worktables implements INodeType {
 
 				const parsedResponse = JSON.parse(response);
 
-				return parsedResponse.data.items[0].subitems.map((subitem: any) => ({
+				// API 2025-04+: Handle null subitems (deleted boards) or empty arrays
+				const item = parsedResponse.data?.items?.[0];
+				if (!item || item.subitems === null || !Array.isArray(item.subitems) || item.subitems.length === 0) {
+					// Return empty array if subitems is null or empty
+					return [];
+				}
+
+				return item.subitems.map((subitem: any) => ({
 					name: subitem.name,
 					value: subitem.id,
 				}));
@@ -2909,6 +2935,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query {
@@ -2986,7 +3013,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 							},
 							body: JSON.stringify({
 								query: `query {
@@ -3025,7 +3052,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 							},
 							body: JSON.stringify({
 								query: `query {
@@ -3050,12 +3077,31 @@ export class Worktables implements INodeType {
 						});
 
 						const parsedResponse = JSON.parse(response);
+						
+						// API 2025-04+: Check for errors, especially FIELD_LIMIT_EXCEEDED for subitems
+						if (parsedResponse.errors) {
+							const fieldLimitError = parsedResponse.errors.find(
+								(err: any) => err.extensions?.code === 'FIELD_LIMIT_EXCEEDED'
+							);
+							if (fieldLimitError) {
+								console.log('Subitems field concurrency limit exceeded. Consider paginating results.');
+								// Return empty array as fallback - caller should handle this gracefully
+								return [];
+							}
+						}
+						
 						const items = parsedResponse?.data?.boards?.[0]?.items_page?.items || [];
 						
+						// API 2025-04+: subitems may be null for deleted boards or empty array
 						// Find first subitem to get its board columns
 						// All subitems in a board share the same subitem board
 						for (const item of items) {
-							if (item.subitems && item.subitems.length > 0) {
+							// Handle null subitems (deleted boards) or empty arrays
+							if (item.subitems === null) {
+								console.log('Subitems returned null - board may be deleted');
+								continue;
+							}
+							if (item.subitems && Array.isArray(item.subitems) && item.subitems.length > 0) {
 								const subitem = item.subitems[0];
 								if (subitem.board && subitem.board.columns) {
 									subitemBoardColumns = subitem.board.columns;
@@ -3067,7 +3113,10 @@ export class Worktables implements INodeType {
 
 					if (subitemBoardColumns.length === 0) {
 						// Fallback: if no subitems found, return empty array
-						// This can happen if the board doesn't have any subitems yet
+						// This can happen if:
+						// - The board doesn't have any subitems yet
+						// - The board was deleted (API 2025-04+ returns null for subitems)
+						// - Field concurrency limit was exceeded
 						console.log('No subitems found in board, cannot load subitem columns for identifier');
 						return [];
 					}
@@ -3101,7 +3150,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: JSON.stringify({
 							query: `query {
@@ -3170,7 +3219,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 							},
 							body: JSON.stringify({
 								query: `query {
@@ -3209,7 +3258,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 							},
 							body: JSON.stringify({
 								query: `query {
@@ -3285,7 +3334,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: JSON.stringify({
 							query: `query {
@@ -3350,7 +3399,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: {
 							query: `{ folders (limit: ${limit}, page: ${page}, workspace_ids: ${workspaceId}) { id name } }`,
@@ -3394,7 +3443,7 @@ export class Worktables implements INodeType {
 						headers: {
 							Authorization: `Bearer ${apiKey}`,
 							'Content-Type': 'application/json',
-							'API-Version': '2025-01',
+							'API-Version': API_VERSION,
 						},
 						body: {
 							query: `{ users (limit: ${limit}, page: ${page}) { id name } }`,
@@ -3431,6 +3480,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: {
 						query: `{ teams { id name } }`,
@@ -3458,6 +3508,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query { boards(ids: ${boardId}) { columns { id title type } } }`,
@@ -3489,6 +3540,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query { boards(ids: ${boardId}) { updates { id body } } }`,
@@ -3547,6 +3599,7 @@ export class Worktables implements INodeType {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
 						'Content-Type': 'application/json',
+						'API-Version': API_VERSION,
 					},
 					body: JSON.stringify({
 						query: `query {
@@ -3597,7 +3650,7 @@ export class Worktables implements INodeType {
 		const headers = {
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
-			'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 		};
 
 		switch (resource) {
@@ -4313,6 +4366,14 @@ export class Worktables implements INodeType {
 											linked_board_id
 										}
 									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
 								}
 							`;
 						} else if (columnIds && columnIds.trim()) {
@@ -4334,6 +4395,14 @@ export class Worktables implements INodeType {
 											display_value
 											mirrored_items {
 												linked_board_id
+											}
+										}
+										... on DependencyValue {
+											display_value
+											linked_item_ids
+											linked_items {
+												id
+												name
 											}
 										}
 									}
@@ -4609,7 +4678,10 @@ export class Worktables implements INodeType {
 											const itemConnectionResponse = await this.helpers.request({
 												method: 'POST',
 												url: 'https://api.monday.com/v2',
-												headers,
+												headers: {
+													...headers,
+													'API-Version': API_VERSION,
+												},
 												body: { query: mutation },
 											});
 
@@ -4875,6 +4947,7 @@ export class Worktables implements INodeType {
 								headers: {
 									Authorization: `Bearer ${apiKey}`,
 									'Content-Type': 'application/json',
+									'API-Version': API_VERSION,
 								},
 								body: {
 									query: `query {
@@ -5106,6 +5179,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
+								'API-Version': API_VERSION,
 							},
 							body: {
 								query: `query {
@@ -5174,6 +5248,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
+								'API-Version': API_VERSION,
 							},
 							body: { query: mutation },
 						});
@@ -5420,6 +5495,12 @@ export class Worktables implements INodeType {
 												... on MirrorValue {
 													display_value
 												}
+												... on DependencyValue {
+													display_value
+												}
+												... on MirrorValue {
+													display_value
+												}
 												... on StatusValue {
 													text
 													index
@@ -5509,6 +5590,9 @@ export class Worktables implements INodeType {
 															display_value
 														}
 														... on MirrorValue {
+															display_value
+														}
+														... on DependencyValue {
 															display_value
 														}
 														... on StatusValue {
@@ -5978,6 +6062,14 @@ export class Worktables implements INodeType {
 										linked_board_id
 									}
 								}
+								... on DependencyValue {
+									display_value
+									linked_item_ids
+									linked_items {
+										id
+										name
+									}
+								}
 							}
 						`;
 
@@ -6247,6 +6339,14 @@ export class Worktables implements INodeType {
 												display_value
 												mirrored_items {
 													linked_board_id
+												}
+											}
+											... on DependencyValue {
+												display_value
+												linked_item_ids
+												linked_items {
+													id
+													name
 												}
 											}
 										}
@@ -6622,6 +6722,14 @@ export class Worktables implements INodeType {
 													linked_board_id
 												}
 											}
+											... on DependencyValue {
+												display_value
+												linked_item_ids
+												linked_items {
+													id
+													name
+												}
+											}
 										}
 										group {
 											id
@@ -6815,7 +6923,7 @@ export class Worktables implements INodeType {
 							const uploadFile = await axios.post('https://api.monday.com/v2/file', form, {
 							headers: {
 								Authorization: headers.Authorization,
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 								...form.getHeaders(),
 							},
 								maxContentLength: Infinity,
@@ -6854,6 +6962,14 @@ export class Worktables implements INodeType {
 									display_value
 									mirrored_items {
 										linked_board_id
+									}
+								}
+								... on DependencyValue {
+									display_value
+									linked_item_ids
+									linked_items {
+										id
+										name
 									}
 								}
 							}
@@ -7187,7 +7303,7 @@ export class Worktables implements INodeType {
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
 							headers: {
 								Authorization: headers.Authorization,
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 								...form.getHeaders(),
 							},
 									maxContentLength: Infinity,
@@ -7274,7 +7390,7 @@ export class Worktables implements INodeType {
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
 							headers: {
 								Authorization: headers.Authorization,
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 								...form.getHeaders(),
 							},
 									maxContentLength: Infinity,
@@ -7410,7 +7526,7 @@ export class Worktables implements INodeType {
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
 							headers: {
 								Authorization: headers.Authorization,
-								'API-Version': '2025-01',
+								'API-Version': API_VERSION,
 								...form.getHeaders(),
 							},
 									maxContentLength: Infinity,
@@ -7661,6 +7777,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
+								'API-Version': API_VERSION,
 							},
 							body: {
 								query: `{
@@ -7693,6 +7810,7 @@ export class Worktables implements INodeType {
 							headers: {
 								Authorization: `Bearer ${apiKey}`,
 								'Content-Type': 'application/json',
+								'API-Version': API_VERSION,
 							},
 							body: {
 								query: `{

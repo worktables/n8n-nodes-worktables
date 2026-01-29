@@ -10,6 +10,9 @@ import {
 } from 'n8n-workflow';
 import { formatColumnValue } from '../../utils/worktablesHelpers';
 
+// API Version constant - update this when API version changes
+const API_VERSION = '2026-01';
+
 export class MondayWebhook implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Worktables Webhook',
@@ -174,6 +177,14 @@ export class MondayWebhook implements INodeType {
 							linked_board_id
 						}
 					}
+					... on DependencyValue {
+						display_value
+						linked_item_ids
+						linked_items {
+							id
+							name
+						}
+					}
 				}
 			`;
 		} else if (columnIdsRaw && columnIdsRaw.trim()) {
@@ -195,6 +206,14 @@ export class MondayWebhook implements INodeType {
 							display_value
 							mirrored_items {
 								linked_board_id
+							}
+						}
+						... on DependencyValue {
+							display_value
+							linked_item_ids
+							linked_items {
+								id
+								name
 							}
 						}
 					}
@@ -264,6 +283,7 @@ export class MondayWebhook implements INodeType {
 
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/json',
+				'API-Version': API_VERSION,
 			};
 
 			if (apiKey) {
