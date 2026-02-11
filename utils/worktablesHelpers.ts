@@ -48,6 +48,10 @@ export async function makeGraphQLRequest(
  * Format a single column value from Monday.com API response
  * Filters out column types that are not updateable: subtasks, formula, auto_number, creation_log, last_updated
  * Note: mirror columns are included for read operations (getItem, searchItems) even though they're not updateable
+ * 
+ * API Version 2025-04+ Changes:
+ * - For board_relation, connect_boards, dependency, and subtasks columns, the 'value' field now returns null
+ * - Use 'linked_item_ids' field directly instead of relying on 'value'
  */
 export async function formatColumnValue(col: any): Promise<Record<string, any>> {
 	// Filter out column types that are not updateable
@@ -64,18 +68,38 @@ export async function formatColumnValue(col: any): Promise<Record<string, any>> 
 
 	const formattedCol: Record<string, any> = {
 		type: col.type,
-		value: await parseValue(col.value),
 		text: col.text,
 	};
+
+	// API 2025-04+: For board_relation, connect_boards, dependency, and subtasks,
+	// the 'value' field returns null. Use 'linked_item_ids' instead.
+	const relationColumnTypes = ['board_relation', 'connect_boards', 'dependency', 'subtasks'];
+	const isRelationColumn = relationColumnTypes.includes(col.type);
+
+	if (isRelationColumn) {
+		// For relation columns, value is null in API 2025-04+, so we set it to null explicitly
+		formattedCol.value = null;
+		// Always use linked_item_ids if available
+		if ('linked_item_ids' in col) {
+			formattedCol.linked_item_ids = col.linked_item_ids;
+		}
+	} else {
+		// For other column types, parse value normally
+		formattedCol.value = await parseValue(col.value);
+	}
 
 	if ('display_value' in col) {
 		formattedCol.display_value = col.display_value;
 	}
-	if ('linked_item_ids' in col) {
+	// linked_item_ids is already handled above for relation columns, but include for other types that might have it
+	if (!isRelationColumn && 'linked_item_ids' in col) {
 		formattedCol.linked_item_ids = col.linked_item_ids;
 	}
 	if ('mirrored_items' in col) {
 		formattedCol.mirrored_items = col.mirrored_items;
+	}
+	if ('linked_items' in col) {
+		formattedCol.linked_items = col.linked_items;
 	}
 
 	return formattedCol;
@@ -173,6 +197,7 @@ export async function processColumnValues(
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
+			'API-Version': '2026-01',
 		},
 		body: {
 			query: `query {

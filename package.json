@@ -1,6 +1,6 @@
 {
-  "name": "@worktables/n8n-nodes-worktables",
-  "version": "12.40.0",
+  "name": "@worktables/n8n-nodes-worktables-staging",
+  "version": "1.0.34",
   "description": "n8n nodes for Monday.com integration",
   "keywords": [
     "n8n-community-node-package"
