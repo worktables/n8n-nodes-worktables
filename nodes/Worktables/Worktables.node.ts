@@ -89,13 +89,14 @@ export class Worktables implements INodeType {
 					{ name: 'Subitem', value: 'subitem', description: 'Operations related to subitems' },
 					{ name: 'Update', value: 'update', description: 'Operations related to updates' },
 					{ name: 'Team', value: 'team', description: 'Operations related to teams' },
-					{ name: 'User', value: 'user', description: 'Operations related to users' },
-					{
-						name: 'Download File',
-						value: 'downloadFile',
-						description: 'Download a file from Monday.com',
-					},
-					{ name: 'Query', value: 'query', description: 'Operations related to running queries' },
+				{ name: 'User', value: 'user', description: 'Operations related to users' },
+				{ name: 'Notification', value: 'notification', description: 'Send notifications to users' },
+				{
+					name: 'Download File',
+					value: 'downloadFile',
+					description: 'Download a file from Monday.com',
+				},
+				{ name: 'Query', value: 'query', description: 'Operations related to running queries' },
 				],
 				default: 'board',
 				required: true,
@@ -160,10 +161,10 @@ export class Worktables implements INodeType {
 						action: 'Duplicate a board',
 					},
 					{
-						name: 'List Board Activity Logs',
+						name: 'List Activity Logs',
 						value: 'listBoardActivityLogs',
-						description: 'Retrieve activity logs of a board',
-						action: 'List board activity logs',
+						description: 'Retrieve activity logs of a board with optional filters',
+						action: 'List activity logs',
 					},
 					{
 						name: 'List Board Subscribers',
@@ -310,10 +311,9 @@ export class Worktables implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'List',
+						name: 'List Updates in an Item',
 						value: 'listUpdates',
-						description: 'List updates',
-						action: 'Get an update',
+						action: 'List updates in an item',
 					},
 					{
 						name: 'Create',
@@ -465,6 +465,92 @@ export class Worktables implements INodeType {
 				},
 			},
 
+			// Notification Operations
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'Send Notification',
+						value: 'sendNotification',
+						description: 'Send a notification to a user',
+						action: 'Send a notification',
+					},
+				],
+				default: 'sendNotification',
+				required: true,
+				displayOptions: {
+					show: { resource: ['notification'] },
+				},
+			},
+
+			// Notification Fields
+			{
+				displayName: 'User ID',
+				name: 'notificationUserId',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'The ID of the user to send the notification to',
+				displayOptions: {
+					show: {
+						resource: ['notification'],
+						operation: ['sendNotification'],
+					},
+				},
+			},
+			{
+				displayName: 'Target ID',
+				name: 'notificationTargetId',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'The ID of the target item (e.g. item ID)',
+				displayOptions: {
+					show: {
+						resource: ['notification'],
+						operation: ['sendNotification'],
+					},
+				},
+			},
+			{
+				displayName: 'Target Type',
+				name: 'notificationTargetType',
+				type: 'options',
+				options: [
+					{ name: 'Project', value: 'Project' },
+					{ name: 'Post', value: 'Post' },
+				],
+				default: 'Project',
+				required: true,
+				description: 'The type of the target',
+				displayOptions: {
+					show: {
+						resource: ['notification'],
+						operation: ['sendNotification'],
+					},
+				},
+			},
+			{
+				displayName: 'Message',
+				name: 'notificationMessage',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				default: '',
+				required: true,
+				description: 'The notification text to send',
+				displayOptions: {
+					show: {
+						resource: ['notification'],
+						operation: ['sendNotification'],
+					},
+				},
+			},
+
 			// API Query Actions
 			{
 				displayName: 'Query',
@@ -481,6 +567,33 @@ export class Worktables implements INodeType {
 				default: API_VERSION,
 				description: 'Monday.com API version (e.g., 2025-01, 2024-10)',
 				displayOptions: { show: { resource: ['query'] } },
+			},
+			{
+				displayName: 'Include Pagination',
+				name: 'includePagination',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to automatically fetch all pages of data',
+				displayOptions: { show: { resource: ['query'] } },
+			},
+			{
+				displayName: 'Make sure your query includes a limit parameter (e.g., limit: 100) for pagination to work correctly. Note: the maximum limit may vary depending on the query type — check the <a href="https://developer.monday.com/api-reference">official Monday.com API documentation</a> for details.',
+				name: 'paginationNotice',
+				type: 'notice',
+				default: '',
+				displayOptions: { show: { resource: ['query'], includePagination: [true] } },
+			},
+			{
+				displayName: 'Pagination Type',
+				name: 'paginationType',
+				type: 'options',
+				options: [
+					{ name: 'Page', value: 'page' },
+					{ name: 'Cursor', value: 'cursor' },
+				],
+				default: 'cursor',
+				description: 'Type of pagination used in your query',
+				displayOptions: { show: { resource: ['query'], includePagination: [true] } },
 			},
 
 			// Download File Operations
@@ -1050,6 +1163,68 @@ export class Worktables implements INodeType {
 					show: { operation: ['listBoardActivityLogs', 'getItemActivityLogs'] },
 				},
 			},
+			{
+				displayName: 'Item IDs',
+				name: 'itemIds',
+				type: 'string',
+				default: '',
+				placeholder: '123456789, 987654321',
+				description: 'Comma-separated list of item IDs to filter activity logs',
+				displayOptions: {
+					show: { operation: ['listBoardActivityLogs'] },
+				},
+			},
+			{
+				displayName: 'Column IDs',
+				name: 'columnIdsFilter',
+				type: 'string',
+				default: '',
+				placeholder: 'status, person, date',
+				description: 'Comma-separated list of column IDs to filter activity logs',
+				displayOptions: {
+					show: { operation: ['listBoardActivityLogs'] },
+				},
+			},
+			{
+				displayName: 'Group IDs',
+				name: 'groupIdsFilter',
+				type: 'string',
+				default: '',
+				placeholder: 'new_group, topics',
+				description: 'Comma-separated list of group IDs to filter activity logs',
+				displayOptions: {
+					show: { operation: ['listBoardActivityLogs'] },
+				},
+			},
+			{
+				displayName: 'User IDs',
+				name: 'userIdsFilter',
+				type: 'multiOptions',
+				typeOptions: {
+					loadOptionsMethod: 'getUsers',
+				},
+				default: [],
+				description: 'Choose from the list, or specify IDs using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>',
+				displayOptions: {
+					show: { operation: ['listBoardActivityLogs'] },
+				},
+			},
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				typeOptions: {
+					minValue: 0,
+				},
+				default: 50,
+				description: 'Max number of results to return',
+				hint: 'If 0 is provided, all activity logs will be returned. This may take longer for large boards.',
+				displayOptions: {
+					show: {
+						operation: ['listBoardActivityLogs', 'getItemActivityLogs'],
+					},
+				},
+			},
 			// Group Fields
 			{
 				displayName: 'Archived',
@@ -1207,6 +1382,45 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['createUpdate', 'listUpdates', 'pinUpdate'],
+					},
+				},
+			},
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				default: 50,
+				description: 'Max number of results to return',
+				displayOptions: {
+					show: {
+						operation: ['listUpdates'],
+					},
+				},
+				typeOptions: {
+					minValue: 0,
+				},
+			},
+			{
+				displayName: 'From Date',
+				name: 'fromDate',
+				type: 'dateTime',
+				default: '',
+				description: 'Filter updates created on or after this date',
+				displayOptions: {
+					show: {
+						operation: ['listUpdates'],
+					},
+				},
+			},
+			{
+				displayName: 'To Date',
+				name: 'toDate',
+				type: 'dateTime',
+				default: '',
+				description: 'Filter updates created on or before this date',
+				displayOptions: {
+					show: {
+						operation: ['listUpdates'],
 					},
 				},
 			},
@@ -1862,6 +2076,35 @@ export class Worktables implements INodeType {
 					},
 				},
 			},
+			{
+				displayName: 'Fetch All Columns',
+				name: 'fetchAllColumns',
+				type: 'boolean',
+				default: true,
+				description: 'When true, returns all columns; otherwise, only specified Column IDs',
+				displayOptions: {
+					show: {
+						operation: ['searchItems'],
+						fetchColumnValues: [true],
+					},
+				},
+			},
+			{
+				displayName: 'Column IDs',
+				name: 'columnIds',
+				type: 'string',
+				default: '',
+				placeholder: 'status,owner,date',
+				description:
+					'Comma-separated column IDs to fetch. Leave empty to fetch all columns.',
+				displayOptions: {
+					show: {
+						operation: ['searchItems'],
+						fetchColumnValues: [true],
+						fetchAllColumns: [false],
+					},
+				},
+			},
 			// Advanced Search Parameters
 			{
 				displayName: 'Limit',
@@ -2451,6 +2694,33 @@ export class Worktables implements INodeType {
 				displayOptions: {
 					show: {
 						operation: ['listBoardItems'],
+					},
+				},
+			},
+			{
+				displayName: 'Fetch All Columns',
+				name: 'fetchAllColumns',
+				type: 'boolean',
+				default: true,
+				description: 'When true, returns all columns; otherwise, only specified Column IDs',
+				displayOptions: {
+					show: {
+						operation: ['listBoardItems', 'listGroupItems'],
+					},
+				},
+			},
+			{
+				displayName: 'Column IDs',
+				name: 'columnIds',
+				type: 'string',
+				default: '',
+				placeholder: 'status,owner,date',
+				description:
+					'Comma-separated column IDs to fetch. Leave empty to fetch all columns.',
+				displayOptions: {
+					show: {
+						operation: ['listBoardItems', 'listGroupItems'],
+						fetchAllColumns: [false],
 					},
 				},
 			},
@@ -3639,6 +3909,9 @@ export class Worktables implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][] | null> {
 		const resource = this.getNodeParameter('resource', 0) as string;
 		const operation = this.getNodeParameter('operation', 0) as string;
+		
+
+		console.log('Testing... v1.0.29');
 		const credentials = await this.getCredentials('WorktablesApi');
 		const apiKey = credentials?.apiKey;
 
@@ -4169,33 +4442,117 @@ export class Worktables implements INodeType {
 					}
 					case 'listBoardActivityLogs': {
 						const boardId = this.getNodeParameter('boardId', 0) as string;
-						const from = this.getNodeParameter('from', 0) as string;
-						const to = this.getNodeParameter('to', 0) as string;
+						const from = this.getNodeParameter('from', 0, '') as string;
+						const to = this.getNodeParameter('to', 0, '') as string;
+						const limit = this.getNodeParameter('limit', 0, 50) as number;
+						const itemIdsRaw = this.getNodeParameter('itemIds', 0, '') as string;
+						const columnIdsRaw = this.getNodeParameter('columnIdsFilter', 0, '') as string;
+						const groupIdsRaw = this.getNodeParameter('groupIdsFilter', 0, '') as string;
+						const userIdsFilter = this.getNodeParameter('userIdsFilter', 0, []) as string[];
 
-						console.log('From: ', from);
-						console.log('To: ', to);
-						const query = `
-							query {
-								boards(ids: [${boardId}]) {
-									activity_logs (from: "${from}Z", to: "${to}Z") {
-										id
-										user_id
-										entity
-										event
-										data
-										created_at
+						// Build base activity_logs parameters (without page/limit)
+						const baseParams: string[] = [];
+						
+						if (from) {
+							baseParams.push(`from: "${from}Z"`);
+						}
+						if (to) {
+							baseParams.push(`to: "${to}Z"`);
+						}
+						if (itemIdsRaw && itemIdsRaw.trim()) {
+							const itemIds = itemIdsRaw.split(',').map(id => `"${id.trim()}"`).filter(id => id !== '""');
+							if (itemIds.length > 0) {
+								baseParams.push(`item_ids: [${itemIds.join(', ')}]`);
+							}
+						}
+						if (columnIdsRaw && columnIdsRaw.trim()) {
+							const columnIds = columnIdsRaw.split(',').map(id => `"${id.trim()}"`).filter(id => id !== '""');
+							if (columnIds.length > 0) {
+								baseParams.push(`column_ids: [${columnIds.join(', ')}]`);
+							}
+						}
+						if (groupIdsRaw && groupIdsRaw.trim()) {
+							const groupIds = groupIdsRaw.split(',').map(id => `"${id.trim()}"`).filter(id => id !== '""');
+							if (groupIds.length > 0) {
+								baseParams.push(`group_ids: [${groupIds.join(', ')}]`);
+							}
+						}
+						if (userIdsFilter && userIdsFilter.length > 0) {
+							const userIds = userIdsFilter.map(id => `"${id}"`);
+							baseParams.push(`user_ids: [${userIds.join(', ')}]`);
+						}
+
+						let allLogs: any[] = [];
+						let page = 1;
+						const pageLimit = 100;
+
+						do {
+							const params = [...baseParams];
+							params.push(`page: ${page}`);
+
+							if (limit === 0) {
+								params.push(`limit: ${pageLimit}`);
+							} else {
+								const remaining = limit - allLogs.length;
+								const currentLimit = remaining > pageLimit ? pageLimit : remaining;
+								params.push(`limit: ${currentLimit}`);
+							}
+
+							const paramsString = `(${params.join(', ')})`;
+
+							const query = `
+								query {
+									boards(ids: [${boardId}]) {
+										activity_logs${paramsString} {
+											id
+											user_id
+											entity
+											event
+											data
+											created_at
+										}
 									}
 								}
-							}
 							`;
 
-						console.log('Query: ', query);
+							console.log('Activity Logs Query: ', query);
 
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query },
+							const rawResponse: any = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query },
+							});
+
+							const parsed = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+							const boards = parsed?.data?.boards || [];
+							const logs = boards.length > 0 ? (boards[0].activity_logs || []) : [];
+
+							allLogs = allLogs.concat(logs);
+
+							// If we got fewer results than requested, we've reached the end
+							if (logs.length < pageLimit) {
+								break;
+							}
+
+							// If limit is set and we've reached it, stop
+							if (limit > 0 && allLogs.length >= limit) {
+								if (allLogs.length > limit) {
+									allLogs = allLogs.slice(0, limit);
+								}
+								break;
+							}
+
+							page++;
+						} while (true);
+
+						// Format as response
+						response = JSON.stringify({
+							data: {
+								boards: [{
+									activity_logs: allLogs,
+								}],
+							},
 						});
 						break;
 					}
@@ -5857,6 +6214,7 @@ export class Worktables implements INodeType {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const from = this.getNodeParameter('from', 0, '') as string;
 						const to = this.getNodeParameter('to', 0, '') as string;
+						const limit = this.getNodeParameter('limit', 0, 50) as number;
 
 						if (!itemId) {
 							throw new NodeApiError(this.getNode(), { message: 'Item ID is required.' });
@@ -5906,55 +6264,90 @@ export class Worktables implements INodeType {
 							throw new NodeApiError(this.getNode(), { message: 'Could not retrieve board ID for the item.' });
 						}
 
-						// Build activity_logs query with optional date range and item_ids filter
-						const params: string[] = [`item_ids: ["${itemId}"]`];
+						// Build base activity_logs parameters
+						const baseParams: string[] = [`item_ids: ["${itemId}"]`];
 						if (from) {
-							params.push(`from: "${from}Z"`);
+							baseParams.push(`from: "${from}Z"`);
 						}
 						if (to) {
-							params.push(`to: "${to}Z"`);
+							baseParams.push(`to: "${to}Z"`);
 						}
-						const paramsString = params.join(', ');
 
-						const query = `
-							query {
-								boards(ids: [${boardId}]) {
-									activity_logs(${paramsString}) {
-										id
-										user_id
-										entity
-										event
-										data
-										account_id
-										created_at
+						let allLogs: any[] = [];
+						let page = 1;
+						const pageLimit = 100;
+
+						do {
+							const params = [...baseParams];
+							params.push(`page: ${page}`);
+
+							if (limit === 0) {
+								params.push(`limit: ${pageLimit}`);
+							} else {
+								const remaining = limit - allLogs.length;
+								const currentLimit = remaining > pageLimit ? pageLimit : remaining;
+								params.push(`limit: ${currentLimit}`);
+							}
+
+							const paramsString = params.join(', ');
+
+							const query = `
+								query {
+									boards(ids: [${boardId}]) {
+										activity_logs(${paramsString}) {
+											id
+											user_id
+											entity
+											event
+											data
+											account_id
+											created_at
+										}
 									}
 								}
+							`;
+
+							console.log('Activity Logs Query: ', query);
+
+							const rawResponse: any = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query },
+							});
+
+							const parsed = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+
+							if (parsed.errors) {
+								throw new NodeApiError(this.getNode(), { message: JSON.stringify(parsed.errors) });
 							}
-						`;
 
-						console.log('Activity Logs Query: ', query);
+							const boards = parsed?.data?.boards || [];
+							const logs = boards.length > 0 ? (boards[0].activity_logs || []) : [];
 
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query },
-						});
+							allLogs = allLogs.concat(logs);
 
-						const parsed = typeof response === 'string' ? JSON.parse(response) : response;
-						
-						if (parsed.errors) {
-							throw new NodeApiError(this.getNode(), { message: JSON.stringify(parsed.errors) });
-						}
+							// If we got fewer results than requested, we've reached the end
+							if (logs.length < pageLimit) {
+								break;
+							}
 
-						const boards = parsed?.data?.boards || [];
-						const activityLogs = boards.length > 0 ? (boards[0].activity_logs || []) : [];
+							// If limit is set and we've reached it, stop
+							if (limit > 0 && allLogs.length >= limit) {
+								if (allLogs.length > limit) {
+									allLogs = allLogs.slice(0, limit);
+								}
+								break;
+							}
+
+							page++;
+						} while (true);
 
 						const formatted = {
 							item_id: item.id,
 							item_name: item.name,
 							board_id: boardId,
-							activity_logs: activityLogs.map((log: any) => {
+							activity_logs: allLogs.map((log: any) => {
 								// Try to parse data field if it's a JSON string
 								let parsedData = log.data;
 								if (typeof log.data === 'string') {
@@ -6040,38 +6433,75 @@ export class Worktables implements INodeType {
 
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 						const limit = this.getNodeParameter('limit', 0) as number;
+						const fetchAllColumns = this.getNodeParameter('fetchAllColumns', 0, true) as boolean;
+						const columnIdsRaw = this.getNodeParameter('columnIds', 0, '') as string;
 
 						if (!boardId) {
 							throw new NodeApiError(this.getNode(), { message: 'Board ID is required.' });
 						}
 
-						// Build column values query
-						const queryColumnValues = `
-							column_values {
-								id
-								text
-								value
-								type
-								... on BoardRelationValue {
-									display_value
-									linked_item_ids
-								}
-								... on MirrorValue {
-									display_value
-									mirrored_items {
-										linked_board_id
+						// Build column values query based on fetchAllColumns setting
+						let queryColumnValues = '';
+						if (fetchAllColumns) {
+							queryColumnValues = `
+								column_values {
+									id
+									text
+									value
+									type
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
 									}
 								}
-								... on DependencyValue {
-									display_value
-									linked_item_ids
-									linked_items {
+							`;
+						} else if (columnIdsRaw && columnIdsRaw.trim()) {
+							// Parse column IDs and build specific column query
+							const specificColumnIds = columnIdsRaw.split(',').map(id => id.trim()).filter(id => id);
+							if (specificColumnIds.length > 0) {
+								const columnIdsString = specificColumnIds.map(id => `"${id}"`).join(', ');
+								queryColumnValues = `
+									column_values(ids: [${columnIdsString}]) {
 										id
-										name
+										text
+										value
+										type
+										... on BoardRelationValue {
+											display_value
+											linked_item_ids
+										}
+										... on MirrorValue {
+											display_value
+											mirrored_items {
+												linked_board_id
+											}
+										}
+										... on DependencyValue {
+											display_value
+											linked_item_ids
+											linked_items {
+												id
+												name
+											}
+										}
 									}
-								}
+								`;
 							}
-						`;
+						}
 
 						const querySubitems = `
 							subitems {
@@ -6246,6 +6676,8 @@ export class Worktables implements INodeType {
 							0,
 							false,
 						) as boolean;
+						const fetchAllColumns = this.getNodeParameter('fetchAllColumns', 0, true) as boolean;
+						const columnIdsRaw = this.getNodeParameter('columnIds', 0, '') as string;
 
 						const filterRules = this.getNodeParameter('filterRules', 0) as {
 							rule: {
@@ -6316,17 +6748,43 @@ export class Worktables implements INodeType {
 							});
 						}
 
-						const query = `query {
-							boards(ids: [${boardId}]) {
-								items_page(limit: 100, query_params: {
-									${logicalOperator ? `operator: ${logicalOperator},` : ''}
-									${rulesArray.length > 0 ? `rules: [${rulesArray.join(', ')}],` : ''}
-									${orderByArray.length > 0 ? `order_by: [${orderByArray.join(', ')}]` : ''}
-								}) {
-									items {
+						// Build column values query based on fetchAllColumns setting
+						let queryColumnValues = '';
+						if (fetchColumnValues) {
+							if (fetchAllColumns) {
+								queryColumnValues = `
+									column_values {
 										id
-										name
-										column_values {
+										text
+										value
+										type
+										... on BoardRelationValue {
+											display_value
+											linked_item_ids
+										}
+										... on MirrorValue {
+											display_value
+											mirrored_items {
+												linked_board_id
+											}
+										}
+										... on DependencyValue {
+											display_value
+											linked_item_ids
+											linked_items {
+												id
+												name
+											}
+										}
+									}
+								`;
+							} else if (columnIdsRaw && columnIdsRaw.trim()) {
+								// Parse column IDs and build specific column query
+								const specificColumnIds = columnIdsRaw.split(',').map(id => id.trim()).filter(id => id);
+								if (specificColumnIds.length > 0) {
+									const columnIdsString = specificColumnIds.map(id => `"${id}"`).join(', ');
+									queryColumnValues = `
+										column_values(ids: [${columnIdsString}]) {
 											id
 											text
 											value
@@ -6350,6 +6808,22 @@ export class Worktables implements INodeType {
 												}
 											}
 										}
+									`;
+								}
+							}
+						}
+
+						const query = `query {
+							boards(ids: [${boardId}]) {
+								items_page(limit: 100, query_params: {
+									${logicalOperator ? `operator: ${logicalOperator},` : ''}
+									${rulesArray.length > 0 ? `rules: [${rulesArray.join(', ')}],` : ''}
+									${orderByArray.length > 0 ? `order_by: [${orderByArray.join(', ')}]` : ''}
+								}) {
+									items {
+										id
+										name
+										${queryColumnValues}
 										group {
 											id
 											title
@@ -6881,65 +7355,72 @@ export class Worktables implements INodeType {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const columnId = this.getNodeParameter('fileColumnId', 0) as string;
 						const binaryNamesRaw = this.getNodeParameter('binaryPropertyName', 0) as string;
-
+					  
 						if (!itemId || !columnId || !binaryNamesRaw) {
-							throw new NodeApiError(this.getNode(), {
-								message: 'Item ID, Column ID, and Binary Property Name(s) are required.',
-							});
+						  throw new NodeApiError(this.getNode(), {
+							message: 'Item ID, Column ID, and Binary Property Name(s) are required.',
+						  });
 						}
-
+					  
 						const binaryNames = parseBinaryNames(binaryNamesRaw);
-
+					  
 						for (const binaryName of binaryNames) {
-							let binaryData;
-							try {
-								binaryData = this.helpers.assertBinaryData(0, binaryName);
-							} catch (error) {
-								console.warn(`Binary field '${binaryName}' not found. Skipping.`);
-								continue;
-							}
-
-							const fileBuffer = Buffer.from(binaryData.data, 'base64');
-							const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
-
-							console.log('Binary Data:', binaryData);
-							console.log('fileName:', fileName);
-
-							const form = new FormData();
-							form.append(
-								'query',
-								`mutation ($file: File!) {
-				add_file_to_column (file: $file, item_id: ${itemId}, column_id: "${columnId}") {
-					id
-				}
-			}`,
-							);
-
-							form.append('variables[file]', fileBuffer, {
-								filename: fileName,
-								contentType: binaryData.mimeType || 'application/octet-stream',
-							});
-
-							const uploadFile = await axios.post('https://api.monday.com/v2/file', form, {
+						  let binaryData;
+						  try {
+							binaryData = this.helpers.assertBinaryData(0, binaryName);
+						  } catch (error) {
+							console.warn(`Binary field '${binaryName}' not found. Skipping.`);
+							continue;
+						  }
+					  
+						  const fileBuffer = await this.helpers.getBinaryDataBuffer(0, binaryName);
+					  
+						  const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
+					  
+						  console.log('Binary Meta:', binaryData);
+						  console.log('fileName:', fileName);
+						  console.log('buffer length:', fileBuffer.length);
+					  
+						  const form = new FormData();
+					  
+						  form.append(
+							'query',
+							`mutation ($file: File!) {
+							  add_file_to_column (file: $file, item_id: ${itemId}, column_id: "${columnId}") {
+								id
+							  }
+							}`,
+						  );
+					  
+						  form.append('variables[file]', fileBuffer, {
+							filename: fileName,
+							contentType: binaryData.mimeType || 'application/octet-stream',
+						  });
+					  
+						  const uploadFile = await axios.post('https://api.monday.com/v2/file', form, {
 							headers: {
-								Authorization: headers.Authorization,
-								'API-Version': API_VERSION,
-								...form.getHeaders(),
+							  Authorization: headers.Authorization,
+							  'API-Version': API_VERSION,
+							  ...form.getHeaders(),
 							},
-								maxContentLength: Infinity,
-								maxBodyLength: Infinity,
-							});
-
-							console.log(`Upload response for '${binaryName}':`, uploadFile.data);
-							response = JSON.stringify(uploadFile.data);
+							maxContentLength: Infinity,
+							maxBodyLength: Infinity,
+						  });
+					  
+						  console.log(`Upload response for '${binaryName}':`, uploadFile.data);
+						  console.log('HERRRRRRROOOOO');
+						  response = JSON.stringify(uploadFile.data);
 						}
-
+					  
 						break;
-					}
+					  }
+					  
 					case 'listGroupItems': {
 						const boardId = this.getNodeParameter('boardId', 0) as string;
 						const groupId = this.getNodeParameter('groupId', 0) as string;
 						const limit = this.getNodeParameter('limit', 0) as number;
+						const fetchAllColumns = this.getNodeParameter('fetchAllColumns', 0, true) as boolean;
+						const columnIdsRaw = this.getNodeParameter('columnIds', 0, '') as string;
 
 						if (!boardId || !groupId) {
 							throw new NodeApiError(this.getNode(), {
@@ -6947,33 +7428,68 @@ export class Worktables implements INodeType {
 							});
 						}
 
-						// Build column values query
-						const queryColumnValues = `
-							column_values {
-								id
-								text
-								value
-								type
-								... on BoardRelationValue {
-									display_value
-									linked_item_ids
-								}
-								... on MirrorValue {
-									display_value
-									mirrored_items {
-										linked_board_id
+						// Build column values query based on fetchAllColumns setting
+						let queryColumnValues = '';
+						if (fetchAllColumns) {
+							queryColumnValues = `
+								column_values {
+									id
+									text
+									value
+									type
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
 									}
 								}
-								... on DependencyValue {
-									display_value
-									linked_item_ids
-									linked_items {
+							`;
+						} else if (columnIdsRaw && columnIdsRaw.trim()) {
+							// Parse column IDs and build specific column query
+							const specificColumnIds = columnIdsRaw.split(',').map(id => id.trim()).filter(id => id);
+							if (specificColumnIds.length > 0) {
+								const columnIdsString = specificColumnIds.map(id => `"${id}"`).join(', ');
+								queryColumnValues = `
+									column_values(ids: [${columnIdsString}]) {
 										id
-										name
+										text
+										value
+										type
+										... on BoardRelationValue {
+											display_value
+											linked_item_ids
+										}
+										... on MirrorValue {
+											display_value
+											mirrored_items {
+												linked_board_id
+											}
+										}
+										... on DependencyValue {
+											display_value
+											linked_item_ids
+											linked_items {
+												id
+												name
+											}
+										}
 									}
-								}
+								`;
 							}
-						`;
+						}
 
 						let allItems: any[] = [];
 						let cursor: string | null = null;
@@ -7099,90 +7615,141 @@ export class Worktables implements INodeType {
 				break;
 			}
 			case 'update': {
+				console.log(`>>>>>> UPDATE RESOURCE - operation: "${operation}" - v1.0.28 <<<<<<`);
 				switch (operation) {
 					case 'listUpdates': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
-						const query = `
-							query {
-								items (ids: [${itemId}]) {
-									updates {
-									id
-									text_body
-									created_at
-									updated_at
-									creator {
-										id
-										name
-									}
-									assets {
-										name
-										public_url
-										file_size
-									}
-									replies {
-										text_body
-										created_at
-										creator {
-										name
+						const limit = this.getNodeParameter('limit', 0, 25) as number;
+						const fromDate = this.getNodeParameter('fromDate', 0, '') as string;
+						const toDate = this.getNodeParameter('toDate', 0, '') as string;
+
+						// Build updates parameters
+						const updatesParams: string[] = [];
+						if (limit > 0) {
+							updatesParams.push(`limit: ${limit}`);
+						}
+
+						let allUpdates: any[] = [];
+						let page = 1;
+						const pageLimit = limit === 0 ? 100 : limit; // Use 100 per page when fetching all
+
+						do {
+							const currentParams = [...updatesParams];
+							if (limit === 0) {
+								currentParams.push(`limit: ${pageLimit}`);
+								currentParams.push(`page: ${page}`);
+							}
+
+							const paramsString = currentParams.length > 0 ? `(${currentParams.join(', ')})` : '';
+
+							const query = `
+								query {
+									items (ids: [${itemId}]) {
+										updates${paramsString} {
+											id
+											text_body
+											created_at
+											updated_at
+											creator {
+												id
+												name
+											}
+											assets {
+												name
+												public_url
+												file_size
+											}
+											replies {
+												text_body
+												created_at
+												creator {
+													name
+												}
+											}
+											pinned_to_top {
+												item_id
+											}
 										}
 									}
-									pinned_to_top {
-										item_id
-									}
-									}
 								}
+							`;
+
+							const rawResponse = await this.helpers.request({
+								method: 'POST',
+								url: 'https://api.monday.com/v2',
+								headers,
+								body: { query },
+							});
+
+							const parsedResponse = await parseApiResponse(rawResponse);
+
+							if (!parsedResponse.success) {
+								const parsed = JSON.parse(parsedResponse.data);
+								const firstError = parsed.errors || { message: 'Unknown error' };
+								const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
+								
+								const continueOnFail = this.continueOnFail();
+								
+								if (continueOnFail) {
+									return [[{
+										json: {
+											error: {
+												message: errorData.message || 'Unknown error',
+												details: errorData,
+											}
+										}
+									}]];
+								} else {
+									throw new NodeApiError(this.getNode(), {
+										message: errorData.message || 'Failed to list updates',
+									});
 								}
+							}
 
-						`;
+							const parsed = JSON.parse(parsedResponse.data);
+							const updates = parsed?.data?.items?.[0]?.updates || [];
+							
+							if (updates.length === 0) {
+								break; // No more updates
+							}
 
-						response = await this.helpers.request({
-							method: 'POST',
-							url: 'https://api.monday.com/v2',
-							headers,
-							body: { query },
+							allUpdates = allUpdates.concat(updates);
+							page++;
+
+							// If not fetching all or we got less than page limit, stop
+							if (limit > 0 || updates.length < pageLimit) {
+								break;
+							}
+						} while (limit === 0);
+
+						// Filter by date if specified
+						let filteredUpdates = allUpdates;
+						if (fromDate) {
+							const fromDateTime = new Date(fromDate).getTime();
+							filteredUpdates = filteredUpdates.filter((update: any) => {
+								const updateDate = new Date(update.created_at).getTime();
+								return updateDate >= fromDateTime;
+							});
+						}
+						if (toDate) {
+							const toDateTime = new Date(toDate).getTime();
+							filteredUpdates = filteredUpdates.filter((update: any) => {
+								const updateDate = new Date(update.created_at).getTime();
+								return updateDate <= toDateTime;
+							});
+						}
+
+						const formattedUpdates = filteredUpdates.map((update: any) => {
+							const pinnedToTop = update.pinned_to_top || [];
+							const isPinnedToTop = Array.isArray(pinnedToTop) && pinnedToTop.length > 0;
+							
+							return {
+								...update,
+								pinned_to_top: isPinnedToTop,
+							};
 						});
 
-						response = await parseApiResponse(response);
-
-						if (response.success) {
-							const parsed = JSON.parse(response.data);
-							const updates = parsed?.data?.items?.[0]?.updates || [];
-							const formattedUpdates = updates.map((update: any) => {
-								const pinnedToTop = update.pinned_to_top || [];
-								const isPinnedToTop = Array.isArray(pinnedToTop) && pinnedToTop.length > 0;
-								
-								return {
-									...update,
-									pinned_to_top: isPinnedToTop,
-								};
-							});
-							return [formattedUpdates.map((update: unknown) => ({ json: update }))];
-						} else {
-							const parsed = JSON.parse(response.data);
-							const firstError = parsed.errors || { message: 'Unknown error' };
-							const errorData = Array.isArray(firstError) ? firstError[0] : firstError;
-							
-							const continueOnFail = this.continueOnFail();
-							
-							if (continueOnFail) {
-								// Return error as output item with error property
-								return [[{
-									json: {
-										error: {
-											message: errorData.message || 'Unknown error',
-											details: errorData,
-										}
-									}
-								}]];
-							} else {
-								// Throw error normally
-								const error = new NodeApiError(this.getNode(), errorData, {
-									message: errorData.message || 'Unknown error',
-									description: JSON.stringify(errorData, null, 2),
-								});
-								throw error;
-							}
-						}
+						return [formattedUpdates.map((update: any) => ({ json: update as IDataObject }))];
 					}
 					case 'createUpdate': {
 						const items = this.getInputData();
@@ -7283,8 +7850,18 @@ export class Worktables implements INodeType {
 									continue;
 								}
 
-								const fileBuffer = Buffer.from(binaryData.data, 'base64');
-								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension, 'upload', 'dat');
+								const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryName);
+								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
+
+								console.log(`[createUpdate] Item ${i} - Binary '${binaryName}' info:`, {
+									fileName,
+									originalName: binaryData.fileName,
+									extension: binaryData.fileExtension,
+									mimeType: binaryData.mimeType,
+									bufferLength: fileBuffer.length,
+									isBuffer: Buffer.isBuffer(fileBuffer),
+									firstBytes: fileBuffer.slice(0, 16).toString('hex'),
+								});
 
 								const form = new FormData();
 								form.append(
@@ -7296,23 +7873,24 @@ export class Worktables implements INodeType {
 									}`,
 								);
 								form.append('variables[file]', fileBuffer, {
-									filename: `${fileName}.${binaryData.fileExtension || 'txt'}`,
+									filename: fileName,
 									contentType: binaryData.mimeType || 'application/octet-stream',
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-							headers: {
-								Authorization: headers.Authorization,
-								'API-Version': API_VERSION,
-								...form.getHeaders(),
-							},
+									headers: {
+										Authorization: headers.Authorization,
+										'API-Version': API_VERSION,
+										...form.getHeaders(),
+									},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
 
+								console.log('HERRRRRRROOOOO');
 								console.log(
-									`Item ${i} - Upload response for '${binaryName}':`,
-									uploadResponse.data,
+									`[createUpdate] Item ${i} - Upload response for '${binaryName}':`,
+									JSON.stringify(uploadResponse.data),
 								);
 							}
 						}
@@ -7360,6 +7938,7 @@ export class Worktables implements INodeType {
 							const binaryNames = parseBinaryNames(attachmentsString);
 
 							console.log(`Item ${i} - Binary names to process:`, binaryNames);
+							console.log('HEREEEEEEE:', updateId);
 
 							for (const binaryName of binaryNames) {
 								let binaryData;
@@ -7370,36 +7949,47 @@ export class Worktables implements INodeType {
 									continue;
 								}
 
-								const fileBuffer = Buffer.from(binaryData.data, 'base64');
-								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension, 'upload', 'dat');
+								const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryName);
+								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
+
+								console.log(`[updateUpdate] Item ${i} - Binary '${binaryName}' info:`, {
+									fileName,
+									originalName: binaryData.fileName,
+									extension: binaryData.fileExtension,
+									mimeType: binaryData.mimeType,
+									bufferLength: fileBuffer.length,
+									isBuffer: Buffer.isBuffer(fileBuffer),
+									firstBytes: fileBuffer.slice(0, 16).toString('hex'),
+								});
 
 								const form = new FormData();
 								form.append(
 									'query',
 									`mutation ($file: File!) {
-											add_file_to_update (update_id: ${updateId}, file: $file) {
-												id
-											}
-										}`,
+										add_file_to_update (update_id: ${updateId}, file: $file) {
+											id
+										}
+									}`,
 								);
 								form.append('variables[file]', fileBuffer, {
-									filename: `${fileName}.${binaryData.fileExtension || 'txt'}`,
+									filename: fileName,
 									contentType: binaryData.mimeType || 'application/octet-stream',
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-							headers: {
-								Authorization: headers.Authorization,
-								'API-Version': API_VERSION,
-								...form.getHeaders(),
-							},
+									headers: {
+										Authorization: headers.Authorization,
+										'API-Version': API_VERSION,
+										...form.getHeaders(),
+									},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
 
+								console.log('HERRRRRRROOOOO');
 								console.log(
-									`Item ${i} - Upload response for '${binaryName}':`,
-									uploadResponse.data,
+									`[updateUpdate] Item ${i} - Upload response for '${binaryName}':`,
+									JSON.stringify(uploadResponse.data),
 								);
 							}
 						}
@@ -7482,9 +8072,11 @@ export class Worktables implements INodeType {
 					}
 
 					case 'uploadFile': {
+						console.log('>>>>>> UPLOAD FILE OPERATION ENTERED v1.0.27 <<<<<<');
 						const items = this.getInputData();
 						const updateId = this.getNodeParameter('updateId', 0) as string;
 						const attachmentsRaw = this.getNodeParameter('attachmentsUpdate', 0) as string;
+						console.log('>>>>>> uploadFile params:', { updateId, attachmentsRaw, itemsCount: items.length });
 
 						if (!updateId || !attachmentsRaw) {
 							throw new NodeApiError(this.getNode(), {
@@ -7504,10 +8096,18 @@ export class Worktables implements INodeType {
 									continue;
 								}
 
-								const fileBuffer = Buffer.from(binaryData.data, 'base64');
+								const fileBuffer = await this.helpers.getBinaryDataBuffer(i, binaryName);
 								const fileName = formatFileName(binaryData.fileName, binaryData.fileExtension);
 
-								console.log(`Item ${i} - Uploading file '${fileName}' from '${binaryName}'`);
+								console.log(`[uploadFile] Item ${i} - Binary '${binaryName}' info:`, {
+									fileName,
+									originalName: binaryData.fileName,
+									extension: binaryData.fileExtension,
+									mimeType: binaryData.mimeType,
+									bufferLength: fileBuffer.length,
+									isBuffer: Buffer.isBuffer(fileBuffer),
+									firstBytes: fileBuffer.slice(0, 16).toString('hex'),
+								});
 
 								const form = new FormData();
 								form.append(
@@ -7524,18 +8124,19 @@ export class Worktables implements INodeType {
 								});
 
 								const uploadResponse = await axios.post('https://api.monday.com/v2/file', form, {
-							headers: {
-								Authorization: headers.Authorization,
-								'API-Version': API_VERSION,
-								...form.getHeaders(),
-							},
+									headers: {
+										Authorization: headers.Authorization,
+										'API-Version': API_VERSION,
+										...form.getHeaders(),
+									},
 									maxContentLength: Infinity,
 									maxBodyLength: Infinity,
 								});
 
+								console.log('HERRRRRRROOOOO');
 								console.log(
-									`Item ${i} - Upload response for '${binaryName}':`,
-									uploadResponse.data,
+									`[uploadFile] Item ${i} - Upload response for '${binaryName}':`,
+									JSON.stringify(uploadResponse.data),
 								);
 								response = JSON.stringify(uploadResponse.data);
 							}
@@ -7739,25 +8340,110 @@ export class Worktables implements INodeType {
 			}
 
 			case 'query': {
-				const runQuery = this.getNodeParameter('runQuery', 0) as string[];
+				const runQuery = this.getNodeParameter('runQuery', 0) as string;
 				const apiVersion = this.getNodeParameter('apiVersion', 0) as string;
+				const includePagination = this.getNodeParameter('includePagination', 0) as boolean;
+
+				console.log('HERRRRRRROOOOO');
+				
 				if (!runQuery) {
 					throw new NodeApiError(this.getNode(), { message: 'Invalid item data.' });
 				}
 				switch (operation) {
 					case 'query': {
-						console.log('Run Query:', runQuery);
 						const apiUrl = `https://api.monday.com/v2`;
 						const queryHeaders = {
 							...headers,
 							'API-Version': apiVersion,
 						};
-						response = await this.helpers.request({
-							method: 'POST',
-							url: apiUrl,
-							headers: queryHeaders,
-							body: { query: runQuery },
-						});
+						
+						if (includePagination) {
+							const paginationType = this.getNodeParameter('paginationType', 0) as string;
+							let allData: any[] = [];
+							
+							if (paginationType === 'cursor') {
+								let cursor: string | null = null;
+								let currentQuery = runQuery;
+								
+								do {
+									if (cursor) {
+										currentQuery = runQuery.replace(/cursor:\s*"[^"]*"/, `cursor: "${cursor}"`);
+										if (!runQuery.includes('cursor:')) {
+											currentQuery = runQuery.replace(/(items_page\s*\([^)]*)(limit:\s*\d+)/, `$1$2, cursor: "${cursor}"`);
+										}
+									}
+									
+									const rawResponse = await this.helpers.request({
+										method: 'POST',
+										url: apiUrl,
+										headers: queryHeaders,
+										body: { query: currentQuery },
+									});
+									
+									const parsed = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+									const itemsPage = parsed?.data?.boards?.[0]?.items_page;
+									const items = itemsPage?.items || [];
+									cursor = itemsPage?.cursor || null;
+									
+									allData = allData.concat(items);
+								} while (cursor);
+								
+								response = JSON.stringify({ data: { items: allData }, totalCount: allData.length });
+							} else {
+								let page = 1;
+								
+								while (true) {
+									const currentQuery = runQuery.replace(/page:\s*\d+/, `page: ${page}`);
+									console.log(`[Pagination] Fetching page ${page}`);
+									console.log(`[Pagination] Query: ${currentQuery}`);
+									
+									const rawResponse = await this.helpers.request({
+										method: 'POST',
+										url: apiUrl,
+										headers: queryHeaders,
+										body: { query: currentQuery },
+									});
+									
+									const parsed = typeof rawResponse === 'string' ? JSON.parse(rawResponse) : rawResponse;
+									
+									// Check for API errors
+									if (parsed?.errors && parsed.errors.length > 0) {
+										console.log(`[Pagination] API Error on page ${page}:`, JSON.stringify(parsed.errors));
+										break;
+									}
+									
+									// Find the first array in data (could be updates, boards, users, etc)
+									let data: any[] = [];
+									if (parsed?.data) {
+										for (const key of Object.keys(parsed.data)) {
+											if (Array.isArray(parsed.data[key])) {
+												data = parsed.data[key];
+												console.log(`[Pagination] Page ${page}: found ${data.length} items in "${key}"`);
+												break;
+											}
+										}
+									}
+									
+									if (data.length === 0) {
+										console.log(`[Pagination] Page ${page}: empty data, stopping`);
+										break;
+									}
+									
+									allData = allData.concat(data);
+									page++;
+								}
+								console.log(`[Pagination] Total fetched: ${allData.length} items`);
+								
+								response = JSON.stringify({ data: allData, totalCount: allData.length });
+							}
+						} else {
+							response = await this.helpers.request({
+								method: 'POST',
+								url: apiUrl,
+								headers: queryHeaders,
+								body: { query: runQuery },
+							});
+						}
 						break;
 					}
 
@@ -7833,6 +8519,40 @@ export class Worktables implements INodeType {
 							},
 						});
 
+						break;
+					}
+				}
+				break;
+			}
+
+			case 'notification': {
+				switch (operation) {
+					case 'sendNotification': {
+						const userId = this.getNodeParameter('notificationUserId', 0) as string;
+						const targetId = this.getNodeParameter('notificationTargetId', 0) as string;
+						const targetType = this.getNodeParameter('notificationTargetType', 0) as string;
+						const text = this.getNodeParameter('notificationMessage', 0) as string;
+
+						const escapedText = escapeGraphQLString(text);
+
+						const mutation = `mutation {
+							create_notification(
+								text: "${escapedText}",
+								user_id: ${parseInt(userId, 10)},
+								target_id: ${parseInt(targetId, 10)},
+								target_type: ${targetType}
+							) {
+								id
+								text
+							}
+						}`;
+
+						response = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query: mutation },
+						});
 						break;
 					}
 				}
