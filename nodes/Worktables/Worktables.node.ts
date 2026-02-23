@@ -5240,21 +5240,65 @@ export class Worktables implements INodeType {
 								column_values: "${escapedColumnValues}"
 							) {
 								id
+								name
 								url
 								board {
 									id
+								}
+								column_values {
+									id
+									text
+									type
+									value
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
 								}
 							}
 						}`;
 
 						console.log('Generated Mutation:', mutation);
 
-						response = await this.helpers.request({
+						const updateResponseRaw = await this.helpers.request({
 							method: 'POST',
 							url: 'https://api.monday.com/v2',
 							headers,
 							body: { query: mutation },
 						});
+
+						const parsedUpdate = JSON.parse(updateResponseRaw);
+						const parsedUpdateData = parsedUpdate?.data?.change_multiple_column_values;
+						const formattedUpdateResponse: Record<string, any> = {
+							id: parsedUpdateData?.id,
+							name: parsedUpdateData?.name,
+							url: parsedUpdateData?.url,
+							board: parsedUpdateData?.board?.id,
+							column_values: {},
+						};
+						if (parsedUpdateData?.column_values?.length) {
+							for (const col of parsedUpdateData.column_values) {
+								const formattedCol = await formatColumnValue(col);
+								if (formattedCol) {
+									formattedUpdateResponse.column_values[col.id] = formattedCol;
+								}
+							}
+						}
+						response = JSON.stringify(formattedUpdateResponse);
 						break;
 					}
 
@@ -5574,8 +5618,25 @@ export class Worktables implements INodeType {
 									id
 									text
 									type
-									
 									value
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
 									}}
 							}`
 							: `mutation {
@@ -5593,7 +5654,24 @@ export class Worktables implements INodeType {
 									text
 									type
 									value
-									
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
 									}}
 							}`;
 
@@ -5644,16 +5722,61 @@ export class Worktables implements INodeType {
 
 						const itemData =
 							parsedResponse.data?.create_item || parsedResponse.data?.create_subitem;
+						const createdItemId = itemData.id;
+
+						// Fetch full item with display_value, linked_item_ids, linked_items for connect board/mirror/dependency columns
+						// (create_item response may not include these fields)
+						const fetchItemQuery = `{
+							items(ids: ["${createdItemId}"]) {
+								id
+								name
+								url
+								board { id }
+								column_values {
+									id
+									text
+									value
+									type
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
+								}
+							}
+						}`;
+
+						const fetchResponse = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query: fetchItemQuery },
+						});
+
+						const fetchedItem = JSON.parse(fetchResponse)?.data?.items?.[0] || itemData;
 
 						const formattedResponse: Record<string, any> = {
-							id: itemData.id,
-							name: itemName,
-							url: itemData.url,
-							board: itemData.board.id,
+							id: fetchedItem.id,
+							name: fetchedItem.name ?? itemName,
+							url: fetchedItem.url,
+							board: fetchedItem.board?.id ?? itemData.board?.id,
 							column_values: {},
 						};
 
-						for (const col of itemData.column_values || []) {
+						for (const col of fetchedItem.column_values || []) {
 							const formattedCol = await formatColumnValue(col);
 							if (formattedCol) {
 								formattedResponse.column_values[col.id] = formattedCol;
