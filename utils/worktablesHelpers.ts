@@ -227,6 +227,16 @@ export async function processColumnValues(
 			console.log('Processing text/simple column:', col);
 			if (col.columnValue !== undefined) {
 				const value = col.columnValue;
+				const boardColumnType = columnDef?.type;
+				// Keep update/create behavior consistent: empty string in simple mode
+				// should not accidentally clear non-text columns.
+				if (
+					value === '' &&
+					boardColumnType &&
+					!['text', 'long_text', 'numbers'].includes(boardColumnType)
+				) {
+					continue;
+				}
 				if (typeof value === 'string' && type === 'file') {
 					const links = value.split(',').map((item) => {
 						const [link, ...nameParts] = item.trim().split(/\s+/);
@@ -421,5 +431,104 @@ export async function processColumnValues(
 	}
 
 	return column_values_object;
+}
+
+/**
+ * Value to send in change_multiple_column_values to clear a column (Monday.com).
+ * https://developer.monday.com/api-reference/docs/change-column-values
+ *
+ * Most types use `{}`. Text/long text and numeric columns typically use "". File columns require clear_all.
+ */
+export function clearValuePayloadForMondayColumnType(columnType: string): string | Record<string, unknown> {
+	switch (columnType) {
+		case 'text':
+		case 'long_text':
+		case 'numbers':
+			return '';
+		case 'file':
+			return { clear_all: true };
+		default:
+			return {};
+	}
+}
+
+/** Column types that cannot be cleared (or should not go through bulk clear). */
+export function mondayColumnTypeCannotBeCleared(columnType: string): boolean {
+	return (
+		columnType === 'subtasks' ||
+		columnType === 'formula' ||
+		columnType === 'auto_number' ||
+		columnType === 'creation_log' ||
+		columnType === 'last_updated' ||
+		columnType === 'mirror' ||
+		columnType === 'progress' ||
+		columnType === 'item_id' ||
+		columnType === 'subitem' ||
+		columnType === 'button'
+	);
+}
+
+/**
+ * Loads column id → type for a board from the Monday API.
+ */
+export async function loadMondayBoardColumnTypeMap(
+	executeFunctions: IExecuteFunctions,
+	headers: Record<string, string>,
+	boardId: string,
+): Promise<Map<string, string>> {
+	const columnsResponse = await executeFunctions.helpers.request({
+		method: 'POST',
+		url: 'https://api.monday.com/v2',
+		headers,
+		body: {
+			query: `query {
+				boards(ids: ${boardId}) {
+					columns {
+						id
+						type
+					}
+				}
+			}`,
+		},
+	});
+
+	const parsed =
+		typeof columnsResponse === 'string' ? JSON.parse(columnsResponse) : columnsResponse;
+
+	const columnsData = parsed?.data?.boards?.[0]?.columns as
+		| Array<{ id: string; type: string }>
+		| undefined;
+
+	if (!columnsData?.length) {
+		throw new NodeApiError(executeFunctions.getNode(), {
+			message: `Could not load columns for board ${boardId}.`,
+		});
+	}
+
+	return new Map(columnsData.map((c) => [c.id, c.type]));
+}
+
+/**
+ * Sets Monday clear payload on column_values_object based on actual board column type.
+ * Throws when the column is missing or cannot be cleared.
+ */
+export function applyMondayColumnClear(
+	executeFunctions: IExecuteFunctions,
+	columnId: string,
+	typeByColumnId: Map<string, string>,
+	column_values_object: Record<string, unknown>,
+): void {
+	const ctype = typeByColumnId.get(columnId);
+	if (!ctype) {
+		throw new NodeApiError(executeFunctions.getNode(), {
+			message: `Column "${columnId}" was not found on this board.`,
+		});
+	}
+	if (mondayColumnTypeCannotBeCleared(ctype)) {
+		throw new NodeApiError(executeFunctions.getNode(), {
+			message: `Column "${columnId}" (${ctype}) cannot be cleared via the API.`,
+		});
+	}
+	column_values_object[columnId] = clearValuePayloadForMondayColumnType(ctype);
 }
 

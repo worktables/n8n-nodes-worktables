@@ -20,7 +20,7 @@ import { parseApiResponse } from '../../utils/isErrorResponse';
 import FormData from 'form-data';
 import axios from 'axios';
 import { parseValue } from '../../utils/parseValue';
-import { buildMentionsGraphQL, parseBinaryNames, makeGraphQLRequest, formatColumnValue, formatFileName, escapeGraphQLString, escapeGraphQLJSONString, processColumnValues } from '../../utils/worktablesHelpers';
+import { buildMentionsGraphQL, parseBinaryNames, makeGraphQLRequest, formatColumnValue, formatFileName, escapeGraphQLString, escapeGraphQLJSONString, processColumnValues, clearValuePayloadForMondayColumnType, mondayColumnTypeCannotBeCleared, loadMondayBoardColumnTypeMap, applyMondayColumnClear } from '../../utils/worktablesHelpers';
 
 import countryCodes from '../../utils/country_codes.json';
 
@@ -235,6 +235,13 @@ export class Worktables implements INodeType {
 						name: 'Update Column Values of an Item',
 						value: 'updateItem',
 						action: 'Update column values of an item',
+					},
+					{
+						name: 'Clear Column Values',
+						value: 'clearColumnValues',
+						description:
+							'Clear one or more columns on an item using Monday empty payloads ({} or ""); file columns use clear_all',
+						action: 'Clear column values',
 					},
 					{
 						name: 'Create or Update Item',
@@ -811,6 +818,7 @@ export class Worktables implements INodeType {
 							'createSubitem',
 							'createItem',
 							'updateItem',
+							'clearColumnValues',
 							'createOrUpdateItem',
 							'listBoardGroups',
 							'createGroup',
@@ -1325,9 +1333,47 @@ export class Worktables implements INodeType {
 					'Select an item from the selected board. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
 				displayOptions: {
 					show: {
-						operation: ['updateItem', 'createSubitem'],
+						operation: ['updateItem', 'clearColumnValues', 'createSubitem'],
 					},
 				},
+			},
+			{
+				displayName: 'Columns to Clear',
+				name: 'columnsToClear',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				default: {},
+				placeholder: 'Add column',
+				description:
+					'Columns to reset on the item. Uses Monday clear rules (empty object or string; files use clear_all). Formula, mirror, button, and similar read-only types are skipped.',
+				displayOptions: {
+					show: {
+						resource: ['item'],
+						operation: ['clearColumnValues'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Column',
+						name: 'columns',
+						values: [
+							{
+								displayName: 'Column',
+								name: 'columnId',
+								type: 'options',
+								typeOptions: {
+									loadOptionsDependsOn: ['boardId'],
+									loadOptionsMethod: 'getColumnsItemsForCreateOrUpdate',
+								},
+								default: '',
+								description:
+									'Select a column. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code-examples/expressions/">expression</a>.',
+							},
+						],
+					},
+				],
 			},
 			{
 				displayName: 'Item mapping',
@@ -1689,6 +1735,8 @@ export class Worktables implements INodeType {
 								name: 'columnValue',
 								type: 'string',
 								default: '',
+								description:
+									'For updates: use `null` to clear this column. Leave this column out if you want to keep its current value.',
 								displayOptions: {
 									show: {
 										columnType: ['simple'],
@@ -4930,6 +4978,131 @@ export class Worktables implements INodeType {
 						return [[{ json: formatted }]];
 					}
 
+					case 'clearColumnValues': {
+						const itemId = this.getNodeParameter('itemId', 0) as string;
+						const boardId = this.getNodeParameter('boardId', 0) as string;
+						const raw = this.getNodeParameter('columnsToClear', 0) as {
+							columns?: { columnId: string }[];
+						};
+						const rows = raw?.columns ?? [];
+						if (!rows.length) {
+							throw new NodeApiError(this.getNode(), {
+								message: 'Add at least one column in Columns to Clear.',
+							});
+						}
+
+						const selectedIds = [...new Set(rows.map((r) => r.columnId).filter(Boolean))];
+						if (!selectedIds.length) {
+							throw new NodeApiError(this.getNode(), {
+								message: 'Each row must have a Column selected.',
+							});
+						}
+
+						const typeById = await loadMondayBoardColumnTypeMap(this, headers, boardId);
+						const column_values_object: Record<string, string | Record<string, unknown>> = {};
+						const skipped: { columnId: string; reason: string }[] = [];
+
+						for (const columnId of selectedIds) {
+							const columnType = typeById.get(columnId);
+							if (!columnType) {
+								skipped.push({ columnId, reason: 'column_not_on_board' });
+								continue;
+							}
+							if (mondayColumnTypeCannotBeCleared(columnType)) {
+								skipped.push({ columnId, reason: `type_not_clearable:${columnType}` });
+								continue;
+							}
+							column_values_object[columnId] = clearValuePayloadForMondayColumnType(columnType);
+						}
+
+						if (Object.keys(column_values_object).length === 0) {
+							throw new NodeApiError(this.getNode(), {
+								message:
+									'No columns could be cleared. All selected columns were skipped or are not on this board.',
+								description: JSON.stringify(skipped),
+							});
+						}
+
+						const escapedColumnValues = escapeGraphQLJSONString(column_values_object);
+						const mutation = `mutation {
+							change_multiple_column_values(
+								create_labels_if_missing: true,
+								board_id: ${boardId},
+								item_id: "${itemId}",
+								column_values: "${escapedColumnValues}"
+							) {
+								id
+								name
+								url
+								board {
+									id
+								}
+								column_values {
+									id
+									text
+									type
+									value
+									... on BoardRelationValue {
+										display_value
+										linked_item_ids
+									}
+									... on MirrorValue {
+										display_value
+										mirrored_items {
+											linked_board_id
+										}
+									}
+									... on DependencyValue {
+										display_value
+										linked_item_ids
+										linked_items {
+											id
+											name
+										}
+									}
+								}
+							}
+						}`;
+
+						const updateResponseRaw = await this.helpers.request({
+							method: 'POST',
+							url: 'https://api.monday.com/v2',
+							headers,
+							body: { query: mutation },
+						});
+
+						const parsedUpdate = JSON.parse(updateResponseRaw);
+						if (parsedUpdate.errors?.length) {
+							const errorMessage = parsedUpdate.errors
+								.map((err: { message?: string }) => err.message || JSON.stringify(err))
+								.join('; ');
+							throw new NodeApiError(this.getNode(), {
+								message: errorMessage,
+								description: JSON.stringify(parsedUpdate.errors),
+							});
+						}
+
+						const parsedUpdateData = parsedUpdate?.data?.change_multiple_column_values;
+						const formattedUpdateResponse: Record<string, any> = {
+							id: parsedUpdateData?.id,
+							name: parsedUpdateData?.name,
+							url: parsedUpdateData?.url,
+							board: parsedUpdateData?.board?.id,
+							column_values: {},
+						};
+						if (parsedUpdateData?.column_values?.length) {
+							for (const col of parsedUpdateData.column_values) {
+								const formattedCol = await formatColumnValue(col);
+								if (formattedCol) {
+									formattedUpdateResponse.column_values[col.id] = formattedCol;
+								}
+							}
+						}
+
+						response = JSON.stringify(formattedUpdateResponse);
+						break;
+					}
+
 					case 'updateItem': {
 						const itemId = this.getNodeParameter('itemId', 0) as string;
 						const boardId = this.getNodeParameter('boardId', 0) as string;
@@ -4970,6 +5143,12 @@ export class Worktables implements INodeType {
 						let column_values_object: Record<string, any> = {};
 						console.log('Column Values:', columnValues);
 						if (columnValues?.length > 0) {
+							const boardColumnTypeMap = await loadMondayBoardColumnTypeMap(
+								this,
+								headers,
+								boardId,
+							);
+
 							for (const col of columnValues) {
 								const { columnId, columnType, columnValue } = col;
 
@@ -4979,10 +5158,22 @@ export class Worktables implements INodeType {
 									console.log('Processing objectValue for column:', columnId);
 									console.log('Object Value:', col.objectValue);
 									try {
-										const parsedValue = JSON.parse(col.objectValue || '{}');
-										column_values_object[columnId] = parsedValue;
+										const rawObj = col.objectValue;
+										const parsedValue = JSON.parse(
+											rawObj === undefined || rawObj === '' ? '{}' : String(rawObj),
+										);
+										if (parsedValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+										} else {
+											column_values_object[columnId] = parsedValue;
+										}
 										console.log('Parsed Object Value:', column_values_object[columnId]);
-									} catch (error) {
+									} catch (error: any) {
 										throw new NodeApiError(this.getNode(), {
 											message: `Invalid JSON format for column ${columnId}: ${error.message}`,
 										});
@@ -4996,8 +5187,27 @@ export class Worktables implements INodeType {
 									col.columnType === 'simple' ||
 									columnType === 'file'
 								) {
+									if (col.columnValue === null) {
+										applyMondayColumnClear(
+											this,
+											columnId,
+											boardColumnTypeMap,
+											column_values_object,
+										);
+										continue;
+									}
 									if (col.columnValue !== undefined) {
 										const value = col.columnValue;
+										const boardColumnType = boardColumnTypeMap.get(columnId);
+										// In "simple" mode, avoid accidental clears on non-text columns when value is empty.
+										// Explicit null remains the only clear signal.
+										if (
+											value === '' &&
+											boardColumnType &&
+											!['text', 'long_text', 'numbers'].includes(boardColumnType)
+										) {
+											continue;
+										}
 										if (typeof value === 'string' && columnType === 'file') {
 											const links = value.split(',').map((item) => {
 												const [link, ...nameParts] = item.trim().split(/\s+/);
@@ -5021,6 +5231,15 @@ export class Worktables implements INodeType {
 								switch (columnType) {
 									case 'board_relation':
 									case 'connect_boards':
+										if (col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										if (col.addConnections) {
 											const mutation = `query {
 												items(ids: [${itemId}]) {
@@ -5061,11 +5280,29 @@ export class Worktables implements INodeType {
 										}
 										break;
 									case 'dependency':
+										if (col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											item_ids: columnValue.split(',').map((id) => id.trim()),
 										};
 										break;
 									case 'people':
+										if (col.peopleValue === null && col.teamsValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										console.log('Processing people column:', col);
 										const personsAndTeams: any[] = [];
 
@@ -5092,22 +5329,71 @@ export class Worktables implements INodeType {
 										}
 										break;
 									case 'timeline':
+										if (col.startDate === null && col.endDate === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											from: col.startDate?.split('T')[0],
 											to: col.endDate?.split('T')[0],
 										};
 										break;
 									case 'checkbox':
+										if (col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = { checked: columnValue };
 										break;
 									case 'hour':
+										if (col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										const [hour, minute = '00'] = columnValue.split(':');
 										column_values_object[columnId] = { hour: Number(hour), minute: Number(minute) };
 										break;
 									case 'status':
+										if (col.statusLabel === null && col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = { label: col.statusLabel || columnValue };
 										break;
 									case 'location':
+										if (
+											col.latitude === null &&
+											col.longitude === null &&
+											col.address === null
+										) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											lat: col.latitude,
 											lng: col.longitude,
@@ -5115,6 +5401,15 @@ export class Worktables implements INodeType {
 										};
 										break;
 									case 'dropdown':
+										if (col.dropdownValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										const dropdownLabels = col.dropdownValue
 											?.split(',')
 											.map((label) => label.trim())
@@ -5125,6 +5420,15 @@ export class Worktables implements INodeType {
 										break;
 
 									case 'date':
+										if (col.dateValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										{
 											const dateValue = col.dateValue as string;
 											const date = new Date(dateValue);
@@ -5148,18 +5452,45 @@ export class Worktables implements INodeType {
 										}
 										break;
 									case 'email':
+										if (col.emailText === null && col.emailValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											text: col.emailText || '',
 											email: col.emailValue || '',
 										};
 										break;
 									case 'link':
+										if (col.linkText === null && col.url === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											text: col.linkText || '',
 											url: col.url || '',
 										};
 										break;
 									case 'phone':
+										if (col.countryCode === null && col.phoneValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = {
 											phone: `${col.countryCode?.split(' ')[0]}${col.phoneValue || ''}`.replace(
 												/[^\d+]/g,
@@ -5169,6 +5500,15 @@ export class Worktables implements INodeType {
 										};
 										break;
 									case 'fileLink':
+										if (col.fileLinks === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										if (col.fileLinks && col.fileLinks.file) {
 											const links = col.fileLinks.file.map((file: any) => ({
 												fileType: 'LINK',
@@ -5211,17 +5551,16 @@ export class Worktables implements INodeType {
 
 										break;
 
-									case 'fileLink':
-										if (col.fileLinks && col.fileLinks.file) {
-											const links = col.fileLinks.file.map((file: any) => ({
-												fileType: 'LINK',
-												linkToFile: file.linkToFile,
-												name: file.name,
-											}));
-											column_values_object[columnId] = { files: links };
-										}
-										break;
 									default:
+										if (col.columnValue === null) {
+											applyMondayColumnClear(
+												this,
+												columnId,
+												boardColumnTypeMap,
+												column_values_object,
+											);
+											break;
+										}
 										column_values_object[columnId] = columnValue;
 										break;
 								}
@@ -5376,6 +5715,15 @@ export class Worktables implements INodeType {
 									console.log('Processing text/simple column:', col);
 									if (col.columnValue !== undefined) {
 										const value = col.columnValue;
+										// Keep behavior aligned with updateItem/processColumnValues:
+										// empty string in simple mode should not affect non-text columns.
+										if (
+											value === '' &&
+											type &&
+											!['text', 'long_text', 'numbers'].includes(type)
+										) {
+											continue;
+										}
 										if (typeof value === 'string' && type === 'file') {
 											const links = value.split(',').map((item) => {
 												const [link, ...nameParts] = item.trim().split(/\s+/);

@@ -1,0 +1,1119 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "47ccb055-3ea3-4557-8880-ae4006790e08",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "getItem",
+        "itemId": "11173141066"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -352
+      ],
+      "id": "8e1b619a-edda-4306-a731-2ef129535cb4",
+      "name": "Get an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "boardId": "=18398443283",
+        "itemName": "Item 4",
+        "columnValues": {
+          "column": [
+            {
+              "columnId": "person",
+              "columnType": "people",
+              "peopleValue": [
+                "61864800"
+              ]
+            },
+            {
+              "columnId": "email",
+              "columnValue": "joe@test.com joe@test.com "
+            }
+          ]
+        }
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -352
+      ],
+      "id": "655990d2-5b4d-43eb-9811-39904edaef05",
+      "name": "Create an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "updateItem"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -352
+      ],
+      "id": "c1ce4da5-b394-417f-9f5d-eaab1382eb8e",
+      "name": "Update column values of an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "createOrUpdateItem"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -144
+      ],
+      "id": "fc38d147-de51-448c-9a0e-38213a2a495c",
+      "name": "Create or update an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "deleteItem",
+        "itemId": "11173142715"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -144
+      ],
+      "id": "d9f9e29d-d057-4e52-8720-b78431c9ea0c",
+      "name": "Delete an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "duplicateItem",
+        "boardId": "=18398443283",
+        "itemId": "=11173160684",
+        "withUpdates": true
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -144
+      ],
+      "id": "26f21bbc-af35-4248-b8b8-5cdffe6017ad",
+      "name": "Duplicate an item",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "listBoardItems",
+        "boardId": "=18398443283",
+        "limit": 0
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        784,
+        272
+      ],
+      "id": "47575602-ee2b-41db-a3b5-1df423fd2dd9",
+      "name": "List items in a board",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "listGroupItems",
+        "boardId": "=18398443283",
+        "groupId": "topics"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        576,
+        272
+      ],
+      "id": "7d29fe25-0a7f-486b-9168-fb057b9e5684",
+      "name": "List items in a group",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "searchItems",
+        "boardId": "=18398443283",
+        "fetchColumnValues": true,
+        "filterRules": {
+          "rule": [
+            {
+              "columnId": "numbers",
+              "compareValue": "123"
+            }
+          ]
+        }
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        368,
+        64
+      ],
+      "id": "d541a91c-81bc-4c04-a554-d1fdd98d7b85",
+      "name": "Search items by filter",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "listItemSubscribers",
+        "itemId": "11177357475"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        576,
+        64
+      ],
+      "id": "04bc5f74-c6a7-4fca-9dfe-22a4f1e1b6f5",
+      "name": "List item subscribers",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "getItemActivityLogs"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        784,
+        64
+      ],
+      "id": "6a613aa9-18ac-4b90-918c-4834495f22e7",
+      "name": "Get item activity logs",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "item",
+        "operation": "uploadItemFile",
+        "boardId": "=18398443283",
+        "itemId": "=11173157923",
+        "fileColumnId": "files"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        368,
+        272
+      ],
+      "id": "cd5e2127-ae98-4e39-90dd-d991f2e4e0fe",
+      "name": "Upload files to column",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Get An Item\n** Fix display value dependency\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        -432
+      ],
+      "typeVersion": 1,
+      "id": "34c2e6fe-3d4c-4bfd-b945-48ad732101e3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        192,
+        272
+      ],
+      "id": "ce08c7fc-bb70-4ae3-a35c-f70140ae9f87",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ec8dc3d1-d1ee-4d84-9d2f-0033b07bb162",
+              "name": "data",
+              "value": "JVBERi0xLjQKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tCjEgMCBvYmoKPDwKL0YxIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nIC9OYW1lIC9GMSAvU3VidHlwZSAvVHlwZTEgL1R5cGUgL0ZvbnQKPj4KZW5kb2JqCjMgMCBvYmoKPDwKL0NvbnRlbnRzIDcgMCBSIC9NZWRpYUJveCBbIDAgMCA2MTIgNzkyIF0gL1BhcmVudCA2IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdCj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgNiAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjUgMCBvYmoKPDwKL0F1dGhvciAoXChhbm9ueW1vdXNcKSkgL0NyZWF0aW9uRGF0ZSAoRDoyMDI2MDIwMzE5MzIzOCswMCcwMCcpIC9DcmVhdG9yIChcKHVuc3BlY2lmaWVkXCkpIC9LZXl3b3JkcyAoKSAvTW9kRGF0ZSAoRDoyMDI2MDIwMzE5MzIzOCswMCcwMCcpIC9Qcm9kdWNlciAoUmVwb3J0TGFiIFBERiBMaWJyYXJ5IC0gd3d3LnJlcG9ydGxhYi5jb20pIAogIC9TdWJqZWN0IChcKHVuc3BlY2lmaWVkXCkpIC9UaXRsZSAoXChhbm9ueW1vdXNcKSkgL1RyYXBwZWQgL0ZhbHNlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9Db3VudCAxIC9LaWRzIFsgMyAwIFIgXSAvVHlwZSAvUGFnZXMKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9MZW5ndGggMTI2Cj4+CnN0cmVhbQpHYXBRaDBFPUYsMFVcSDNUXHBOWVReUUtrP3RjPklQLDtXI1UxXjIzaWhQRU1fSCJaZyNaWVNWVGpWYkciQjVkRDFCPD1KVi9sW0YpOF0pTGxIUCRNQEs4PSojXDhaWjhTVzclVkYhaD42QVFEdV5kJyNBaHVXbW4vSy5Mfj5lbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDA3MyAwMDAwMCBuIAowMDAwMDAwMTA0IDAwMDAwIG4gCjAwMDAwMDAyMTEgMDAwMDAgbiAKMDAwMDAwMDQwNCAwMDAwMCBuIAowMDAwMDAwNDcyIDAwMDAwIG4gCjAwMDAwMDA3NTUgMDAwMDAgbiAKMDAwMDAwMDgxNCAwMDAwMCBuIAp0cmFpbGVyCjw8Ci9JRCAKWzxmYTYwOTZjZjMyZjg1OTgyNmRiNTg5ZDg2ZGU5YzM1MT48ZmE2MDk2Y2YzMmY4NTk4MjZkYjU4OWQ4NmRlOWMzNTE+XQolIFJlcG9ydExhYiBnZW5lcmF0ZWQgUERGIGRvY3VtZW50IC0tIGRpZ2VzdCAoaHR0cDovL3d3dy5yZXBvcnRsYWIuY29tKQoKL0luZm8gNSAwIFIKL1Jvb3QgNCAwIFIKL1NpemUgOAo+PgpzdGFydHhyZWYKMTAzMAolJUVPRgo=",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        272
+      ],
+      "id": "00e32529-f795-4bcd-8016-35a19e5b6e8e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## Upload File\n** Fix upload file"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "72103df5-24fd-47c2-bf0c-937aa66bf634",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "resource": "query",
+        "runQuery": "={\nupdates(page: 6, from_date: \"2025-06-01\", to_date: \"2026-02-01\", limit: 100) {\n     id\n  }\n }"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -656
+      ],
+      "id": "891075f5-3c36-4569-8257-f1ad8dd17445",
+      "name": "Run API query",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -352
+      ],
+      "id": "71da31f8-ef99-432d-ad13-06e8d6abb6a7",
+      "name": "List boards",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listBoardGroups",
+        "workspace": "11806190",
+        "boardId": "3376476969"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        -352
+      ],
+      "id": "bad5673a-a0ec-4fc6-b15b-fb59c7a914e6",
+      "name": "List group",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "createBoard",
+        "workspace": "2425174",
+        "boardName": "Test n8n",
+        "boardKind": "private",
+        "description": "Test",
+        "folder": "-1",
+        "usersBoardIds": {
+          "usersBoardIds": [
+            {
+              "userId": "62818631",
+              "isOwner": true
+            }
+          ]
+        }
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -352
+      ],
+      "id": "35b0ca1c-c989-482d-8688-f3d0359eb36d",
+      "name": "Create a board",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "createGroup",
+        "boardId": "=18399452783",
+        "groupName": "Test",
+        "groupColor": "#00c875",
+        "groupId": "topics",
+        "positionRelative": "after_at"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -352
+      ],
+      "id": "5d1acfc3-56f7-4f9f-9ac6-04fad6ba1d05",
+      "name": "Create a group",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getBoard",
+        "boardId": "7055564156"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        48
+      ],
+      "id": "763938ae-b7f8-4c6b-9da7-6afcf6b50b97",
+      "name": "Get a board",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getGroup",
+        "groupId": "group_mkr5dfqv",
+        "boardId": "7055564156"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        48
+      ],
+      "id": "86cb8686-f113-463a-a3dc-89e054706424",
+      "name": "Get a group",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "duplicateGroup",
+        "boardId": "7055564156",
+        "groupId": "group_mkr5dfqv",
+        "groupName": "Test",
+        "addToTop": true
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        48
+      ],
+      "id": "1af6f3f9-c8a8-4fa9-9148-15e5912b5a87",
+      "name": "Duplicate a group",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "duplicateBoard",
+        "boardName": "Duplicated",
+        "boardId": "7055564156",
+        "workspace": "2425174",
+        "folder": "-1",
+        "keepSubscribers": true,
+        "duplicateType": "duplicate_board_with_pulses_and_updates"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        48
+      ],
+      "id": "e5ff5065-05a8-4742-b7cf-7fa44c330fc7",
+      "name": "Duplicate a board",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listBoardActivityLogs",
+        "boardId": "7055564156",
+        "from": "2026-02-01T00:00:00",
+        "to": "2026-02-19T00:00:00"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -160
+      ],
+      "id": "80404629-b4a6-4ca2-b418-a41a8a8e2138",
+      "name": "List board activity logs",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "listBoardSubscribers",
+        "boardId": "7055564156"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        -144
+      ],
+      "id": "901fa9cf-2de7-44e7-8b19-d1ae5ab792f4",
+      "name": "List board subscribers",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addBoardSubscribers"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -144
+      ],
+      "id": "6bae4db8-f45e-4894-a15e-7186fb311ce7",
+      "name": "Add board subscribers",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeBoardSubscribers"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -144
+      ],
+      "id": "1af9eda4-390b-4317-9c8e-306b573fbd1a",
+      "name": "Remove board subscribers",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "itemId": "8147172241"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        384
+      ],
+      "id": "e50e62e3-9227-4db5-bba6-05cbb7120445",
+      "name": "Get an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "createUpdate",
+        "itemId": "8147172241",
+        "bodyContent": "<p>Test</p>",
+        "pinToTop": true
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        384
+      ],
+      "id": "bc10ab39-5573-41b6-be5c-8b8adda1d514",
+      "name": "Create an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "updateUpdate"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        384
+      ],
+      "id": "74784025-0f95-4527-8402-67714724e148",
+      "name": "Update an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "deleteUpdate"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        384
+      ],
+      "id": "22e66014-781a-4476-a729-29255d62af89",
+      "name": "Delete an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "pinUpdate",
+        "itemId": "8147172241",
+        "updateId": "4915445651"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        576
+      ],
+      "id": "fb48e675-c4c9-4d8e-bac0-8feb62af480d",
+      "name": "Pin an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "duplicateUpdate"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        576
+      ],
+      "id": "5a7748b3-1085-45ad-aabe-b4d6701147ed",
+      "name": "Duplicate an update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        864
+      ],
+      "id": "06f6c0c2-fa92-4aca-ba0c-bf0b30e7771b",
+      "name": "List teams",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team",
+        "operation": "getTeam"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        864
+      ],
+      "id": "6fdce4db-72ce-4852-aa4c-37691238cf52",
+      "name": "Get a team",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team",
+        "operation": "createTeam"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        864
+      ],
+      "id": "14c91fa1-3fe0-4c0c-9f6d-bdbc266e0c6d",
+      "name": "Create a team",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team",
+        "operation": "deleteTeam"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        1056
+      ],
+      "id": "7a18d571-3cd2-4eb3-9434-d999dc8d7043",
+      "name": "Delete a team",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team",
+        "operation": "addUsersToTeam"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        1040
+      ],
+      "id": "d606764c-1dc5-456e-a6d2-cdb7ccc734ec",
+      "name": "Add users to team",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "team",
+        "operation": "removeUsersFromTeam"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        1056
+      ],
+      "id": "dbd5fbda-48de-45b4-9381-ade6484a6c38",
+      "name": "Remove users from team",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "user"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        16,
+        592
+      ],
+      "id": "44186ddc-5d3a-4f02-848e-8c4a29292c7e",
+      "name": "List users",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "user",
+        "operation": "getUser",
+        "userIds": "={{ [35597267] }}"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        224,
+        592
+      ],
+      "id": "900ea23f-66fb-4aa6-950f-73530b8c749c",
+      "name": "Get a user",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "uploadFile",
+        "updateId": "4915647914",
+        "attachmentsUpdate": "data"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        528,
+        560
+      ],
+      "id": "b0d52321-8b4c-4dfa-834a-ab0702b28d05",
+      "name": "Upload files to update",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "update",
+        "operation": "uploadFile",
+        "updateId": "4915647914",
+        "attachmentsUpdate": "data"
+      },
+      "type": "@worktables/n8n-nodes-worktables-staging.worktables",
+      "typeVersion": 1,
+      "position": [
+        784,
+        560
+      ],
+      "id": "15c973d8-5192-4d69-a6ab-c147c9969c0f",
+      "name": "Upload files to update1",
+      "credentials": {
+        "WorktablesApi": {
+          "id": "f2OdNDW5nNo9H7cZ",
+          "name": "Polanski"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "Create an item": {
+      "main": [
+        []
+      ]
+    },
+    "Update column values of an item": {
+      "main": [
+        []
+      ]
+    },
+    "Create or update an item": {
+      "main": [
+        []
+      ]
+    },
+    "List items in a board": {
+      "main": [
+        []
+      ]
+    },
+    "List items in a group": {
+      "main": [
+        []
+      ]
+    },
+    "Search items by filter": {
+      "main": [
+        []
+      ]
+    },
+    "List item subscribers": {
+      "main": [
+        []
+      ]
+    },
+    "Get item activity logs": {
+      "main": [
+        []
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload files to update1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run API query": {
+      "main": [
+        []
+      ]
+    },
+    "List boards": {
+      "main": [
+        []
+      ]
+    },
+    "Create a board": {
+      "main": [
+        []
+      ]
+    },
+    "Create a group": {
+      "main": [
+        []
+      ]
+    },
+    "Get a board": {
+      "main": [
+        []
+      ]
+    },
+    "Get a group": {
+      "main": [
+        []
+      ]
+    },
+    "Duplicate a group": {
+      "main": [
+        []
+      ]
+    },
+    "Duplicate a board": {
+      "main": [
+        []
+      ]
+    },
+    "Create a team": {
+      "main": [
+        []
+      ]
+    },
+    "Delete a team": {
+      "main": [
+        []
+      ]
+    },
+    "Add users to team": {
+      "main": [
+        []
+      ]
+    },
+    "List users": {
+      "main": [
+        []
+      ]
+    },
+    "Upload files to update": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f1b29066d7345706f9e7dcc8a4d46b65e18f0a97dbe4ed6514aa23455bd6622e"
+  }
+}
