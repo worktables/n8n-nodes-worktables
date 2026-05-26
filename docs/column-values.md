@@ -36,8 +36,11 @@ Column values are configured inside the `columnValues.column` array. Each entry 
 | `location` | Latitude, longitude, and address |
 | `timeline` | Start and end date range |
 | `board_relation` | Connect Boards — link item IDs from another board |
+| `dependency` | Dependency column — link item IDs as dependencies |
 | `fileLink` | Add file links by URL |
 | `button` | Trigger a button click |
+| `hour` | Hour column — time as hour and minute |
+| `dropdown` | Dropdown column — one or more labels |
 
 ---
 
@@ -192,14 +195,14 @@ Assign users and/or teams to a People column. Both arrays can be used together.
 {
   "columnId": "phone",
   "columnType": "phone",
-  "countryCode": "US",
+  "countryCode": "+1 US",
   "phoneValue": "5551234567"
 }
 ```
 
 | Field | Key | Type | Notes |
 |---|---|---|---|
-| Country Code | `countryCode` | options | Select from list (e.g. `"US"`, `"BR"`, `"GB"`) |
+| Country Code | `countryCode` | options | Dial code + ISO code (e.g. `"+1 US"`, `"+55 BR"`, `"+44 GB"`) |
 | Phone | `phoneValue` | string | Number only — **no country code prefix** |
 
 ---
@@ -312,6 +315,62 @@ Triggers a button click on a Button column.
 | Field | Key | Type |
 |---|---|---|
 | Click | `buttonValue` | boolean |
+
+---
+
+## dependency
+
+Links items from the same or another board as dependencies. Works the same way as `board_relation`.
+
+```json
+{
+  "columnId": "dependency",
+  "columnType": "dependency",
+  "columnValue": "1234567890, 9876543210"
+}
+```
+
+| Field | Key | Type | Notes |
+|---|---|---|---|
+| Item IDs | `columnValue` | string | Comma-separated item IDs to set as dependencies |
+
+---
+
+## hour
+
+Sets an hour/minute value on an Hour column.
+
+```json
+{
+  "columnId": "hour_column",
+  "columnType": "hour",
+  "columnValue": "14:30"
+}
+```
+
+| Field | Key | Type | Notes |
+|---|---|---|---|
+| Time | `columnValue` | string | `"HH"` (hour only) or `"HH:MM"` (hour and minute) |
+
+---
+
+## dropdown
+
+Sets one or more labels on a Dropdown column.
+
+```json
+{
+  "columnId": "dropdown_column",
+  "columnType": "dropdown",
+  "columnValue": "Option A, Option B"
+}
+```
+
+| Field | Key | Type | Notes |
+|---|---|---|---|
+| Labels | `columnValue` | string | Comma-separated label text values |
+
+> Label text must match existing dropdown options exactly. Labels that don't match existing options are silently ignored.
 
 ---
 

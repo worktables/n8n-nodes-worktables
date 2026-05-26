@@ -15,7 +15,7 @@ Updates are the comment/post thread on a Monday.com item. This resource lets you
 | Update | `updateUpdate` | Edit an existing update |
 | Delete | `deleteUpdate` | Remove an update |
 | Pin | `pinUpdate` | Pin an update to the top |
-| Duplicate | `duplicateUpdate` | Duplicate an existing update |
+| Duplicate | `duplicateUpdate` | Not implemented — throws an error if selected |
 | Upload files to update | `uploadFile` | Attach binary files to an update |
 
 ---

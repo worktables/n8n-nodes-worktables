@@ -86,8 +86,10 @@ Fetches a single item by its ID with formatted column values.
 {
   "id": "8886337853",
   "name": "Item Name",
+  "url": "https://monday.com/boards/8886337654/pulses/8886337853",
   "created_at": "2025-01-01T00:00:00Z",
   "updated_at": "2025-01-02T00:00:00Z",
+  "board": { "id": "8886337654" },
   "group": {
     "id": "topics",
     "title": "Topics",
