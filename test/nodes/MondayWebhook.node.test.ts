@@ -279,6 +279,86 @@ describe('MondayWebhook.webhook', () => {
 		});
 	});
 
+	it('leaves board and group undefined and tolerates missing column values', async () => {
+		const mock = createMockContext({
+			webhookBody: eventBody,
+			params: { getItemAfterEvent: true, fetchAllColumns: true },
+		});
+		mock.request.mockResolvedValueOnce(
+			jsonResponse({ data: { items: [{ id: '1', name: 'Bare', url: 'u', created_at: 'c', updated_at: 'u' }] } }),
+		);
+
+		const result = await node.webhook.call(mock.asWebhook());
+
+		expect((result.workflowData![0][0].json as any).item).toEqual({
+			id: '1',
+			name: 'Bare',
+			url: 'u',
+			created_at: 'c',
+			updated_at: 'u',
+			board: undefined,
+			group: undefined,
+			column_values: {},
+		});
+	});
+
+	it('formats subitems and parent items that have no board or column values', async () => {
+		const mock = createMockContext({
+			webhookBody: eventBody,
+			params: {
+				getItemAfterEvent: true,
+				fetchAllColumns: true,
+				isSubitem: true,
+				fetchParentItem: true,
+			},
+		});
+		mock.request.mockResolvedValueOnce(
+			jsonResponse({
+				data: {
+					items: [
+						{
+							...rawItem,
+							subitems: [{ id: '1', name: 'Sub', url: 'u', created_at: 'c', updated_at: 'u' }],
+							parent_item: { id: '42', name: 'Parent', url: 'u', created_at: 'c', updated_at: 'u' },
+						},
+					],
+				},
+			}),
+		);
+
+		const result = await node.webhook.call(mock.asWebhook());
+
+		const item = (result.workflowData![0][0].json as any).item;
+		expect(item.subitems).toEqual([
+			{ id: '1', name: 'Sub', url: 'u', created_at: 'c', updated_at: 'u', board: undefined, column_values: {} },
+		]);
+		expect(item.parent_item).toEqual({
+			id: '42',
+			name: 'Parent',
+			url: 'u',
+			created_at: 'c',
+			updated_at: 'u',
+			board: undefined,
+			column_values: {},
+		});
+	});
+
+	it.each([
+		['a null response', null],
+		['a response without data', {}],
+		['a response without items', { data: {} }],
+	])('sets item to null for %s', async (_label, response) => {
+		const mock = createMockContext({
+			webhookBody: eventBody,
+			params: { getItemAfterEvent: true, fetchAllColumns: true },
+		});
+		mock.request.mockResolvedValueOnce(response);
+
+		const result = await node.webhook.call(mock.asWebhook());
+
+		expect(result.workflowData![0][0].json).toEqual({ ...eventBody, item: null });
+	});
+
 	it('sets item to null when the API returns no item', async () => {
 		const mock = createMockContext({
 			webhookBody: eventBody,

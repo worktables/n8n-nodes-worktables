@@ -309,6 +309,14 @@ describe('processColumnValues', () => {
 		expect(result).toEqual({});
 	});
 
+	it('passes non-string text values through untouched', async () => {
+		const { result } = await run([
+			{ columnId: 'text_col', columnValue: 42 as any },
+			{ columnId: 'unknown_col', columnValue: { nested: true } as any },
+		]);
+		expect(result).toEqual({ text_col: 42, unknown_col: { nested: true } });
+	});
+
 	it('parses objectValue JSON', async () => {
 		const { result } = await run([
 			{ columnId: 'status_col', columnType: 'objectValue', objectValue: '{"label":"Working on it"}' },
@@ -344,6 +352,24 @@ describe('processColumnValues', () => {
 		});
 	});
 
+	it('splits a comma list into item_ids for dependency columns', async () => {
+		const { result } = await run([{ columnId: 'dependency_col', columnValue: '444, 555 ,666' }]);
+		expect(result).toEqual({ dependency_col: { item_ids: ['444', '555', '666'] } });
+	});
+
+	it('accepts an array of ids for board relation columns', async () => {
+		const { result } = await run([{ columnId: 'relation_col', columnValue: ['1', '2'] as any }]);
+		expect(result).toEqual({ relation_col: { item_ids: ['1', '2'] } });
+	});
+
+	it('sends a single empty id for relation and dependency columns with no value', async () => {
+		const { result } = await run([{ columnId: 'relation_col' }, { columnId: 'dependency_col' }]);
+		expect(result).toEqual({
+			relation_col: { item_ids: [''] },
+			dependency_col: { item_ids: [''] },
+		});
+	});
+
 	it('honours an explicit columnType over the board type', async () => {
 		const { result } = await run([{ columnId: 'text_col', columnType: 'connect_boards', columnValue: '9' }]);
 		expect(result).toEqual({ text_col: { item_ids: ['9'] } });
@@ -364,6 +390,27 @@ describe('processColumnValues', () => {
 		});
 	});
 
+	it('accepts an array of people ids and a comma list of team ids', async () => {
+		const { result } = await run([
+			{ columnId: 'people_col', peopleValue: [10, '20'] as any, teamsValue: '30, 40' },
+		]);
+		expect(result).toEqual({
+			people_col: {
+				personsAndTeams: [
+					{ id: 10, kind: 'person' },
+					{ id: 20, kind: 'person' },
+					{ id: 30, kind: 'team' },
+					{ id: 40, kind: 'team' },
+				],
+			},
+		});
+	});
+
+	it('omits people columns when neither people nor teams are given', async () => {
+		const { result } = await run([{ columnId: 'people_col' }]);
+		expect(result).toEqual({});
+	});
+
 	it('omits people columns when no ids are provided', async () => {
 		const { result } = await run([{ columnId: 'people_col', peopleValue: '', teamsValue: '' }]);
 		expect(result).toEqual({});
@@ -374,6 +421,17 @@ describe('processColumnValues', () => {
 			{ columnId: 'timeline_col', startDate: '2026-01-05T10:00:00.000Z', endDate: '2026-01-09' },
 		]);
 		expect(result).toEqual({ timeline_col: { from: '2026-01-05', to: '2026-01-09' } });
+	});
+
+	it('sends empty timeline bounds when the dates are missing', async () => {
+		const { result } = await run([
+			{ columnId: 'timeline_col' },
+			{ columnId: 'timeline_col2', columnType: 'timeline', startDate: '', endDate: '' },
+		]);
+		expect(result).toEqual({
+			timeline_col: { from: '', to: '' },
+			timeline_col2: { from: '', to: '' },
+		});
 	});
 
 	it('maps checkbox values', async () => {
@@ -389,6 +447,11 @@ describe('processColumnValues', () => {
 	it('defaults the minute to zero when only an hour is given', async () => {
 		const { result } = await run([{ columnId: 'hour_col', columnValue: '9' }]);
 		expect(result).toEqual({ hour_col: { hour: 9, minute: 0 } });
+	});
+
+	it('produces NaN hour and zero minute when the hour column has no value', async () => {
+		const { result } = await run([{ columnId: 'hour_col' }]);
+		expect(result).toEqual({ hour_col: { hour: NaN, minute: 0 } });
 	});
 
 	it('maps status labels and skips status columns without a label', async () => {
@@ -418,6 +481,11 @@ describe('processColumnValues', () => {
 		expect(result).toEqual({ dropdown_col: { labels: ['Red', 'Blue', 'Green'] } });
 	});
 
+	it('skips dropdown columns without a value', async () => {
+		const { result } = await run([{ columnId: 'dropdown_col' }]);
+		expect(result).toEqual({});
+	});
+
 	describe('date columns', () => {
 		it('sends only the date when no time part is given', async () => {
 			const { result } = await run([{ columnId: 'date_col', dateValue: '2026-03-15' }]);
@@ -432,6 +500,11 @@ describe('processColumnValues', () => {
 		it('pads missing seconds', async () => {
 			const { result } = await run([{ columnId: 'date_col', dateValue: '2026-03-15T08:05' }]);
 			expect(result).toEqual({ date_col: { date: '2026-03-15', time: '08:05:00' } });
+		});
+
+		it('falls back to the ISO date when the value has no date part before the T', async () => {
+			const { result } = await run([{ columnId: 'date_col', dateValue: 'Thu, 01 Jan 2026 12:00:00 GMT' }]);
+			expect(result).toEqual({ date_col: { date: '2026-01-01' } });
 		});
 
 		it('skips the column when the date is empty', async () => {
@@ -463,6 +536,14 @@ describe('processColumnValues', () => {
 		});
 	});
 
+	it('defaults email and link parts to empty strings', async () => {
+		const { result } = await run([{ columnId: 'email_col' }, { columnId: 'link_col' }]);
+		expect(result).toEqual({
+			email_col: { text: '', email: '' },
+			link_col: { text: '', url: '' },
+		});
+	});
+
 	it('normalises phone numbers with the country code prefix', async () => {
 		const { result } = await run([
 			{ columnId: 'phone_col', countryCode: '+55 BR', phoneValue: '(11) 99999-8888' },
@@ -473,6 +554,11 @@ describe('processColumnValues', () => {
 	it('handles phone columns without a country code', async () => {
 		const { result } = await run([{ columnId: 'phone_col', phoneValue: '555 0100' }]);
 		expect(result).toEqual({ phone_col: { phone: '5550100', countryShortName: '' } });
+	});
+
+	it('produces an empty phone when no number is given', async () => {
+		const { result } = await run([{ columnId: 'phone_col' }]);
+		expect(result).toEqual({ phone_col: { phone: '', countryShortName: '' } });
 	});
 
 	it('maps file link collections', async () => {

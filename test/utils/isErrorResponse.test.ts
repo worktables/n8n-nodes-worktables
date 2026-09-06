@@ -13,6 +13,12 @@ describe('parseApiResponse', () => {
 		await expect(parseApiResponse(raw)).resolves.toEqual({ success: false, data: raw });
 	});
 
+	it('flags errors that carry no extensions block', async () => {
+		const raw = JSON.stringify({ errors: [{ message: 'Internal server error' }] });
+		await expect(parseApiResponse(raw)).resolves.toEqual({ success: false, data: raw });
+		expect(console.log).not.toHaveBeenCalledWith('Complexity budget exhausted:', expect.anything());
+	});
+
 	it('logs complexity budget details when that error code is returned', async () => {
 		const raw = JSON.stringify({
 			errors: [
