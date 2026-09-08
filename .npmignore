@@ -1,2 +1,5 @@
 .DS_Store
 *.tsbuildinfo
+test
+jest.config.js
+coverage

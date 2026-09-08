@@ -125,6 +125,26 @@ Full parameter references and JSON examples for every operation are in the [`doc
 - [`docs/webhook.md`](./docs/webhook.md)
 - [`docs/column-values.md`](./docs/column-values.md)
 
+## Development
+
+Install dependencies and run the unit tests with Jest:
+
+```bash
+npm install
+npm test
+```
+
+Other useful scripts:
+
+```bash
+npm run test:watch      # re-run tests on change
+npm run test:coverage   # write a coverage report to coverage/
+npm run build           # compile to dist/ (tests are excluded)
+npm run lint
+```
+
+Tests live in `test/` and mock the n8n execution context, so they never call the Monday.com API. See `test/helpers/mockContext.ts` for the mock and add a new `*.test.ts` file next to the existing suites when you add an operation.
+
 ## Compatibility
 
 Tested against n8n `1.x`. Requires Node.js 18 or later.
